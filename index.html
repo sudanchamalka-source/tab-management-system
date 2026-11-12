@@ -1,442 +1,1188 @@
 <!DOCTYPE html>
-<html lang="si">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ටැබ්ලට් කළමනාකරණ පද්ධතිය</title>
-<link rel="icon" href="logo.jpg">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BKMV Haliela – TAB Management System v2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="style.css">
-</head>
-<body class="locked">
-<div id="loginScr"><div class="lg-box"><img src="logo.jpg" alt=""><h2>ටැබ්ලට් කළමනාකරණය</h2><p>බ/ඩෙන්සිල් කොබ්බෑකඩුව මහා විද්‍යාලය</p>
-<input type="email" id="lg-email" placeholder="Email" autocomplete="username"><input type="password" id="lg-pass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-<button class="btn btn-blue" id="lg-btn" onclick="doLogin()">🔐 Login</button><div id="lg-err"></div></div></div>
-
-
-<header class="hdr">
-  <div class="hdr-in">
-    <div class="hdr-logo" style="padding:2px;background:rgba(255,255,255,.95);border-radius:10px;overflow:hidden"><img src="logo.jpg" style="width:100%;height:100%;object-fit:contain;border-radius:8px"></div>
-    <div class="hdr-text">
-      <h1>ටැබ්ලට් කළමනාකරණය</h1>
-      <p>බ/ඩෙන්සිල් කොබ්බෑකඩුව මහා විද්‍යාලය, හාලි ඇල · ICT ඒකකය</p>
-    </div>
-    <div style="margin-left:auto;display:flex;gap:6px;align-items:center"><div class="sync-chip" id="syncChip">⏳</div><div class="hdr-cnt" id="hCnt" style="margin-left:0">0 ටැබ්</div></div>
-  </div>
-</header>
-
-<!-- ══ INVENTORY PAGE ══ -->
-<div class="page active" id="pg-inv">
-  <div class="stats">
-    <div class="stat st"><span class="sn" id="sTot">0</span><div class="sl">මුළු ටැබ්</div></div>
-    <div class="stat sa"><span class="sn" id="sAv">0</span><div class="sl">ඇත</div></div>
-    <div class="stat su"><span class="sn" id="sUs">0</span><div class="sl">ලබාදී ඇත</div></div>
-  </div>
-  <div style="padding:14px">
-    <div class="srch"><span class="si">🔍</span>
-      <input type="search" id="searchQ" placeholder="ටැබ් ID, serial..." oninput="renderTabList()">
-    </div>
-    <div class="filters">
-      <button class="fpill on" onclick="setF('all',this)">සියල්ල</button>
-      <button class="fpill" onclick="setF('available',this)">ඇති ඒවා</button>
-      <button class="fpill" onclick="setF('assigned',this)">ලබාදුන්</button>
-      <button class="fpill" onclick="setF('student',this)">සිසු</button>
-      <button class="fpill" onclick="setF('teacher',this)">ගුරු</button>
-    </div>
-    <div class="sec-ttl">ටැබ්ලට් ඉන්වෙන්ටරි <span class="bdg" id="invBdg">0</span></div>
-    <div class="tab-list" id="tabList"></div>
-  </div>
-</div>
-
-<!-- ══ ADD TABLET PAGE ══ -->
-<div class="page" id="pg-add">
-  <div class="sec-ttl" id="addTtl">➕ නව ටැබ්ලට් ඉන්වෙන්ටරි</div>
-  <div id="editBdg" style="display:none"><div class="edit-bdg">✏️ සංස්කරණය කරමින්...</div></div>
-
-  <div class="card">
-    <div class="card-ttl">📱 ටැබ්ලට් හඳුනාගැනීම</div>
-    <div class="fg"><label>ටැබ් අංකය (Tab No) *</label>
-      <input type="text" id="f-id" placeholder="TAB-001" oninput="this.value=this.value.toUpperCase()"></div>
-    <div class="fg-row">
-      <div class="fg"><label>ටැබ් Serial No *</label>
-        <input type="text" id="f-ts" placeholder="SN-TAB-XXXXX"></div>
-      <div class="fg"><label>Keyboard Serial No *</label>
-        <input type="text" id="f-ks" placeholder="SN-KB-XXXXX"></div>
-    </div>
-    <div class="fg"><label>ටැබ්ලට් ඡායාරූපය (Tab Photo)</label>
-      <div class="pzone" onclick="document.getElementById('f-ph').click()">
-        <div class="pzi">📷</div><p>ටැබ්ලට් ඡායාරූපයක් ගන්න</p>
-        <input type="file" id="f-ph" accept="image/*" capture="environment" style="display:none"
-          onchange="loadPh(this,'f-phprev','f-phd')">
-        <img class="pprev" id="f-phprev">
-      </div>
-    </div>
-    <div class="fg"><label>Keyboard ඡායාරූපය (KB Photo)</label>
-      <div class="pzone" onclick="document.getElementById('f-kbph').click()">
-        <div class="pzi">⌨️</div><p>Keyboard ඡායාරූපයක් ගන්න</p>
-        <input type="file" id="f-kbph" accept="image/*" capture="environment" style="display:none"
-          onchange="loadPh(this,'f-kbphprev','f-kbphd')">
-        <img class="pprev" id="f-kbphprev">
-      </div>
-    </div>
-    <div class="fg-row"><div class="fg"><label>තත්වය (Condition)</label><select id="f-cond"><option value="WORKING">වැඩ කරයි</option><option value="NOT WORKING">වැඩ නොකරයි</option><option value="NOT CHARGING">Charge නොවේ</option></select></div>
-      <div class="fg"><label>දෝෂය (Issue)</label><input type="text" id="f-issue" placeholder="උදා: Space key pressing"></div></div>
-    <div class="fg"><label>සටහන</label><input type="text" id="f-notes" placeholder="කිසියම් සටහනක්..."></div>
-  </div>
-  <input type="hidden" id="f-eid">
-  <button class="btn btn-blue" onclick="saveTab()">💾 ටැබ්ලට් සුරකින්න</button>
-  <div style="height:8px"></div>
-  <button class="btn btn-ghost" id="cancelBtn" style="display:none" onclick="cancelEdit()">✖ අවලංගු කරන්න</button>
-</div>
-
-<!-- ══ STUDENTS PAGE ══ -->
-<div class="page" id="pg-stu">
-  <div class="sec-ttl">👦 සිසු දත්ත සමුදාය <span class="bdg" id="stuBdg">0</span></div>
-
-  <div class="tsw">
-    <button class="tsw-btn on" id="sw-sl" onclick="swStuView('list')">📋 ලැයිස්තුව</button>
-    <button class="tsw-btn" id="sw-sa" onclick="swStuView('add')">➕ සිසු එකතු කරන්න</button>
-    <button class="tsw-btn" id="sw-sq" onclick="swStuView('qr')">🖨️ QR Print</button>
-  </div>
-
-  <!-- Student List -->
-  <div id="stu-list-view">
-    <div class="srch"><span class="si">🔍</span>
-      <input type="search" id="stuSearchQ" placeholder="නම, ශ්‍රේණිය..." oninput="renderStuList()">
-    </div>
-    <div class="filters" id="classFiltBar">
-      <button class="fpill on" onclick="setStuF('all',this)">සියල්ල</button>
-    </div>
-    <div class="stu-list" id="stuList"></div>
-  </div>
-
-  <!-- Student Add Form -->
-  <div id="stu-add-view" style="display:none">
-    <div id="stuEditBdg" style="display:none"><div class="edit-bdg">✏️ සංස්කරණය...</div></div>
-    <div class="card">
-      <div class="card-ttl">👦 සිසු තොරතුරු</div>
-      <div class="fg"><label>සිසු ID (ස්වයංක්‍රීය) *</label>
-        <input type="text" id="s-id" placeholder="STU-001" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="fg"><label>නම (Full Name) *</label>
-        <input type="text" id="s-name" placeholder="සිසුවාගේ සම්පූර්ණ නම"></div>
-      <div class="fg-row">
-        <div class="fg"><label>ශ්‍රේණිය (Grade) *</label>
-          <select id="s-grade">
-            <option value="">-- ශ්‍රේණිය --</option>
-            <option>6</option><option>7</option><option>8</option><option>9</option>
-            <option>10</option><option>11</option><option>12</option><option>13</option>
-          </select>
-        </div>
-        <div class="fg"><label>කොට්ඨාශය (Class) *</label>
-          <select id="s-class">
-            <option value="">-- කොට්ඨාශය --</option>
-            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
-          </select>
-        </div>
-      </div>
-      <div class="fg"><label>Stream (විෂය ධාරා)</label>
-        <select id="s-stream">
-          <option value="">-- Stream (විකල්ප) --</option>
-          <option>Arts</option><option>Science</option><option>Commerce</option><option>Technology</option>
-        </select>
-      </div>
-      <div class="fg"><label>දිනය</label>
-        <input type="date" id="s-dob" placeholder="ජන්ම දිනය"></div>
-      <div class="fg"><label>සිසු ඡායාරූපය</label>
-        <div class="pzone" onclick="document.getElementById('s-ph').click()">
-          <div class="pzi">🤳</div><p>සිසු ඡායාරූපයක් ගන්න</p>
-          <input type="file" id="s-ph" accept="image/*" capture="user" style="display:none"
-            onchange="loadPh(this,'s-phprev','s-phd')">
-          <img class="pprev" id="s-phprev">
-        </div>
-      </div>
-    </div>
-    <input type="hidden" id="s-eid">
-    <button class="btn btn-blue" onclick="saveStu()">💾 සිසු සුරකින්න</button>
-    <div style="height:8px"></div>
-    <button class="btn btn-ghost" id="stuCancelBtn" style="display:none" onclick="cancelStuEdit()">✖ අවලංගු කරන්න</button>
-  </div>
-
-  <!-- Student QR Print -->
-  <div id="stu-qr-view" style="display:none">
-    <div class="card">
-      <div class="card-ttl">QR Print කිරීම</div>
-      <div class="fg"><label>ශ්‍රේණිය තෝරන්න</label>
-        <select id="stuQrGrade" onchange="renderStuQRPrint()">
-          <option value="">-- සියලු ශ්‍රේණි --</option>
-        </select>
-      </div>
-      <button class="btn btn-blue" onclick="printStuQRBatch()">🖨️ QR Print කරන්න</button>
-      <div style="height:8px"></div>
-      <button class="btn btn-green" onclick="downloadStuQRBatchJpeg()">📥 JPEG Download</button>
-    </div>
-    <div id="stuQrPrintList"></div>
-  </div>
-</div>
-
-<!-- ══ TEACHERS PAGE ══ -->
-<div class="page" id="pg-tch">
-  <div class="sec-ttl">👩‍🏫 ගුරු දත්ත සමුදාය <span class="bdg" id="tchBdg">0</span></div>
-
-  <div class="tsw">
-    <button class="tsw-btn on" id="sw-tl" onclick="swTchView('list')">📋 ලැයිස්තුව</button>
-    <button class="tsw-btn" id="sw-ta" onclick="swTchView('add')">➕ ගුරු එකතු කරන්න</button>
-    <button class="tsw-btn" id="sw-tq" onclick="swTchView('qr')">🖨️ QR Print</button>
-  </div>
-
-  <!-- Teacher List -->
-  <div id="tch-list-view">
-    <div class="srch"><span class="si">🔍</span>
-      <input type="search" id="tchSearchQ" placeholder="නම, දුරකථනය..." oninput="renderTchList()">
-    </div>
-    <div class="tch-list" id="tchList"></div>
-  </div>
-
-  <!-- Teacher Add Form -->
-  <div id="tch-add-view" style="display:none">
-    <div id="tchEditBdg" style="display:none"><div class="edit-bdg">✏️ සංස්කරණය...</div></div>
-    <div class="card">
-      <div class="card-ttl">👩‍🏫 ගුරු තොරතුරු</div>
-      <div class="fg"><label>ගුරු ID *</label>
-        <input type="text" id="t-id" placeholder="TCH-001" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="fg"><label>සම්පූර්ණ නම *</label>
-        <input type="text" id="t-name" placeholder="ගුරුවරයාගේ/ගුරුවරියගේ නම"></div>
-      <div class="fg-row">
-        <div class="fg"><label>දුරකථනය *</label>
-          <input type="tel" id="t-phone" placeholder="07X XXX XXXX"></div>
-        <div class="fg"><label>ජා.හැ.පත. *</label>
-          <input type="text" id="t-nic" placeholder="XXXXXXXXXX"></div>
-      </div>
-      <div class="fg"><label>විෂය (Subject)</label>
-        <input type="text" id="t-subject" placeholder="ගණිතය, ICT..."></div>
-      <div class="fg"><label>ගුරු ඡායාරූපය</label>
-        <div class="pzone" onclick="document.getElementById('t-ph').click()">
-          <div class="pzi">🤳</div><p>ගුරු ඡායාරූපයක් ගන්න</p>
-          <input type="file" id="t-ph" accept="image/*" capture="user" style="display:none"
-            onchange="loadPh(this,'t-phprev','t-phd')">
-          <img class="pprev" id="t-phprev">
-        </div>
-      </div>
-    </div>
-    <input type="hidden" id="t-eid">
-    <button class="btn btn-blue" onclick="saveTch()">💾 ගුරු සුරකින්න</button>
-    <div style="height:8px"></div>
-    <button class="btn btn-ghost" id="tchCancelBtn" style="display:none" onclick="cancelTchEdit()">✖ අවලංගු කරන්න</button>
-  </div>
-
-  <!-- Teacher QR Print -->
-  <div id="tch-qr-view" style="display:none">
-    <div class="card">
-      <div class="card-ttl">ගුරු QR Print කිරීම</div>
-      <button class="btn btn-blue" onclick="printTchQRBatch()">🖨️ සියලු ගුරු QR Print</button>
-      <div style="height:8px"></div>
-      <button class="btn btn-green" onclick="downloadTchQRBatchJpeg()">📥 JPEG Download</button>
-    </div>
-    <div id="tchQrPrintList"></div>
-  </div>
-</div>
-
-<!-- ══ SCAN PAGE ══ -->
-<div class="page" id="pg-scan">
-  <div class="sec-ttl">📷 QR Scan කරන්න</div>
-
-  <div class="tsw">
-    <button class="tsw-btn on" id="sc-t1" onclick="swScanMode('issue')">📱 ටැබ් Issue</button>
-    <button class="tsw-btn" id="sc-t2" onclick="swScanMode('lookup')">🔍 QR Lookup</button>
-  </div>
-
-  <!-- ISSUE MODE -->
-  <div id="scan-issue-mode">
-    <div class="scan-step" id="step1">
-      <div class="step-hdr">
-        <div class="step-num active" id="sn1">1</div>
-        <div><div class="step-ttl">ටැබ්ලට් QR Scan කරන්න</div>
-          <div class="step-sub">ටැබ් Serial QR හෝ Keyboard QR</div></div>
-      </div>
-      <div class="cam-wrap" id="cam1">
-        <video id="vid1" autoplay playsinline muted></video>
-        <canvas class="overlay" id="cvs1"></canvas>
-        <div class="cam-overlay"><div class="scan-box"></div></div>
-        <div class="cam-hint">QR code frame එකට ගෙන එන්න</div>
-      </div>
-      <div class="sr" id="sr1">
-        <div class="sr-row"><span class="sr-icon"></span><span class="sr-id" id="sr1id"></span></div>
-        <div class="sr-det" id="sr1det"></div>
-      </div>
-      <button class="btn btn-blue" id="scanBtn1" onclick="startScan(1)">📷 Camera විවෘත කරන්න</button>
-      <div style="height:8px"></div>
-      <button class="btn btn-ghost" id="rescan1" style="display:none" onclick="resetScan()">🔄 නැවත Scan කරන්න</button>
-    </div>
-
-    <div class="scan-step" id="step2" style="opacity:.45;pointer-events:none">
-      <div class="step-hdr">
-        <div class="step-num" id="sn2">2</div>
-        <div><div class="step-ttl">සිසු / ගුරු QR Scan කරන්න</div>
-          <div class="step-sub">ලබාදෙන සිසු හෝ ගුරු QR</div></div>
-      </div>
-      <div class="cam-wrap" id="cam2">
-        <video id="vid2" autoplay playsinline muted></video>
-        <canvas class="overlay" id="cvs2"></canvas>
-        <div class="cam-overlay"><div class="scan-box"></div></div>
-        <div class="cam-hint">QR code frame එකට ගෙන එන්න</div>
-      </div>
-      <div class="pp" id="pp2">
-        <div class="pp-row">
-          <div class="pp-av" id="ppav"></div>
-          <div><div class="pp-name" id="ppname"></div><div class="pp-role" id="pprole"></div></div>
-        </div>
-      </div>
-      <div class="sr" id="sr2">
-        <div class="sr-row"><span class="sr-icon"></span><span class="sr-id" id="sr2id"></span></div>
-        <div class="sr-det" id="sr2det"></div>
-      </div>
-      <div id="manualForm" style="display:none">
-        <div class="divider"></div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:11px">📝 QR නොමැති නම් මෙහි ඇතුළත් කරන්න:</div>
-        <div class="tsw">
-          <button class="tsw-btn on" id="mt-s" onclick="swMT('student')">👦 සිසු</button>
-          <button class="tsw-btn" id="mt-t" onclick="swMT('teacher')">👩‍🏫 ගුරු</button>
-        </div>
-        <div id="mstu">
-          <div class="fg"><label>නම *</label><input type="text" id="mn-name" placeholder="සිසුවාගේ නම"></div>
-          <div class="fg"><label>ශ්‍රේණිය *</label><input type="text" id="mn-grade" placeholder="10 A"></div>
-        </div>
-        <div id="mtch" style="display:none">
-          <div class="fg"><label>නම *</label><input type="text" id="mt-name" placeholder="ගුරුවරයාගේ නම"></div>
-          <div class="fg"><label>දුරකථනය *</label><input type="tel" id="mt-phone" placeholder="07X XXX XXXX"></div>
-          <div class="fg"><label>ජා.හැ.පත. *</label><input type="text" id="mt-nic" placeholder="XXXXXXXXXX"></div>
-        </div>
-      </div>
-      <button class="btn btn-blue" id="scanBtn2" onclick="startScan(2)" style="display:none">📷 Camera විවෘත කරන්න</button>
-      <div style="height:8px"></div>
-      <button class="btn btn-ghost" id="manualBtn" onclick="showManual()" style="display:none">📝 අතින් ඇතුළත් කරන්න</button>
-      <button class="btn btn-ghost" id="rescan2" style="display:none" onclick="resetScan2()">🔄 නැවත Scan</button>
-    </div>
-
-    <div class="scan-step" id="step3" style="opacity:.45;pointer-events:none">
-      <div class="step-hdr">
-        <div class="step-num" id="sn3">3</div>
-        <div><div class="step-ttl">තහවුරු කරන්න</div>
-          <div class="step-sub">ටැබ්ලට් ලබාදෙන්නද?</div></div>
-      </div>
-      <div id="confirmBox" style="display:none">
-        <div class="asgn-blk" id="confDetail"></div>
-      </div>
-      <button class="btn btn-green" id="confirmBtn" onclick="confirmIssue()" style="display:none">✅ ලබාදෙන්න — සුරකින්න</button>
-    </div>
-  </div>
-
-  <!-- LOOKUP MODE -->
-  <div id="scan-lookup-mode" style="display:none">
-    <div class="scan-step">
-      <div class="step-hdr">
-        <div class="step-num active">📷</div>
-        <div><div class="step-ttl">ඕනෑම QR Scan කරන්න</div>
-          <div class="step-sub">ටැබ්, සිසු, ගුරු QR — ඕනෑම එකක්</div></div>
-      </div>
-      <div class="cam-wrap" id="camLookup" style="display:block">
-        <video id="vidLookup" autoplay playsinline muted></video>
-        <canvas class="overlay" id="cvsLookup"></canvas>
-        <div class="cam-overlay"><div class="scan-box"></div></div>
-        <div class="cam-hint">QR code scan කරන්න</div>
-      </div>
-      <button class="btn btn-blue" id="lookupScanBtn" onclick="startLookupScan()">📷 Camera විවෘත කරන්න</button>
-      <div style="height:8px"></div>
-      <button class="btn btn-ghost" id="lookupResetBtn" onclick="resetLookupScan()" style="display:none">🔄 නැවත Scan</button>
-    </div>
-    <div id="lookupResult"></div>
-  </div>
-</div>
-
-<!-- ══ MORE PAGE ══ -->
-<div class="page" id="pg-more">
-  <div class="sec-ttl">⚙️ වැඩිදුර</div>
-  <div class="card">
-    <div class="card-ttl">↩️ ටැබ්ලට් ආපසු ගන්න</div>
-    <div class="fg"><label>ලබාදුන් ටැබ්ලට්</label>
-      <select id="r-sel"><option value="">-- ලබාදුන් ටැබ්ලට් --</option></select></div>
-    <button class="btn btn-ghost" onclick="doReturn()" style="margin-top:4px">↩️ ආපසු ලැබුණු බව සටහන්</button>
-  </div>
-  <div class="card">
-    <div class="card-ttl">🖨️ ටැබ් QR Print (එකක් බැගින්)</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">QR 1 = Tab No + Tab Serial + KB Serial</div>
-    <div class="fg"><label>ටැබ්ලට් තෝරන්න</label>
-      <select id="qr-sel"><option value="">-- ටැබ්ලට් --</option></select></div>
-    <button class="btn btn-ghost" onclick="printQRSel()">🖨️ QR Print කරන්න</button>
-    <div style="height:8px"></div>
-    <button class="btn btn-green" onclick="downloadTabQRJpegSel()">📥 JPEG Download (තෝරාගත්)</button>
-    <div style="height:8px"></div>
-    <button class="btn btn-blue" onclick="printAllTabQR()">🖨️ සියලු ටැබ් QR Print (batch)</button>
-    <div style="height:8px"></div>
-    <button class="btn btn-green" onclick="downloadAllTabQRJpeg()">📥 සියලු ටැබ් JPEG Download</button>
-  </div>
-  <div class="card">
-    <div class="card-ttl">📄 PDF වාර්තා</div>
-    <div style="display:flex;flex-direction:column;gap:9px">
-      <button class="btn btn-blue" onclick="pdfReport('inventory')">📋 ටැබ්ලට් ඉන්වෙන්ටරි වාර්තාව</button>
-      <button class="btn btn-blue" onclick="pdfReport('assigned')">📤 ලබාදුන් ටැබ්ලට් වාර්තාව</button>
-      <button class="btn btn-blue" onclick="pdfReport('students')">👦 සිසු ලැයිස්තු වාර්තාව</button>
-      <button class="btn btn-blue" onclick="pdfReport('teachers')">👩‍🏫 ගුරු ලැයිස්තු වාර්තාව</button>
-      <button class="btn btn-blue" onclick="pdfReport('summary')">📊 සමස්ත සාරාංශ වාර්තාව</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-ttl">📊 දත්ත කළමනාකරණය</div>
-    <div style="display:flex;flex-direction:column;gap:9px">
-      <button class="btn btn-ghost" onclick="exportJSON()">📤 දත්ත Export (JSON)</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('impF').click()">📥 දත්ත Import (JSON)</button>
-      <input type="file" id="impF" accept=".json" style="display:none" onchange="importJSON(this)">
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-ttl">☁️ Firebase ගිණුම</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px" id="acctInfo"></p>
-    <div style="display:flex;flex-direction:column;gap:9px">
-      <button class="btn btn-blue" onclick="seedTablets()">🌱 ආරම්භක ටැබ් 49 ආයාත කරන්න</button>
-      <button class="btn btn-ghost" onclick="doLogout()">🚪 Logout</button>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-ttl" style="color:var(--pink)">⚠️ අනතුරු ඇඟවීම</div>
-    <button class="btn btn-pink" onclick="clearAll()">🗑️ සියලු දත්ත මකන්න</button>
-  </div>
-  <div class="card">
-    <div class="card-ttl">ℹ️ මෙම යෙදුම ගැන</div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.8">
-      📱 <strong>ටැබ්ලට් කළමනාකරණ පද්ධතිය</strong><br>
-      බ/ඩෙන්සිල් කොබ්බෑකඩුව මහා විද්‍යාලය, හාලි ඇල · ICT ඒකකය<br>
-      අනුවාදය 4.0 — Firebase live sync + QR<br>
-      <span style="font-size:10px">දත්ත Firebase Cloud හි ගබඩා වේ — සියලු උපාංග අතර live sync.</span>
-    </p>
-  </div>
-</div>
-
-<!-- BOTTOM NAV -->
-<nav class="bnav">
-  <button class="bnav-btn on" onclick="goPage('inv',this)"><span class="ni">📋</span>ඉන්වෙන්ටරි</button>
-  <button class="bnav-btn" onclick="goPage('add',this)"><span class="ni">➕</span>ටැබ් Add</button>
-  <button class="bnav-btn" onclick="goPage('stu',this)"><span class="ni">👦</span>සිසු</button>
-  <button class="bnav-btn" onclick="goPage('tch',this)"><span class="ni">👩‍🏫</span>ගුරු</button>
-  <button class="bnav-btn" onclick="goPage('scan',this)"><span class="ni">📷</span>Scan</button>
-  <button class="bnav-btn" onclick="goPage('more',this)"><span class="ni">⚙️</span>වැඩිදුර</button>
-</nav>
-
-<!-- DETAIL MODAL -->
-<div class="ov" id="ov" onclick="closeOv(event)">
-  <div class="modal">
-    <div class="modal-hdl"></div>
-    <div id="modBody"></div>
-  </div>
-</div>
-<div class="toast" id="toast"></div>
-
 <script src="firebase-config.js"></script>
-<script src="app.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050f2e;color:#fff;font-family:'Segoe UI',Arial,sans-serif;min-height:100vh}
+input,select,textarea{font-family:'Segoe UI',Arial,sans-serif}
+input::placeholder,textarea::placeholder{color:#64748b}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#3b82f6!important}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#071540}
+::-webkit-scrollbar-thumb{background:#1d4ed8;border-radius:3px}
+.tab-btn{background:transparent;border:none;color:#64748b;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.5px;border-bottom:2px solid transparent;transition:all .2s}
+.tab-btn.active{color:#60a5fa;border-bottom-color:#3b82f6}
+@media(max-width:600px){
+  .stat-grid{flex-wrap:wrap;gap:6px!important}
+  .stat-box{min-width:60px!important;padding:4px 8px!important}
+  .tab-cards{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}
+  .issue-row{grid-template-columns:60px 80px 1fr 80px!important}
+  .issue-col-hide{display:none!important}
+}
+@media print{
+  body{background:#fff!important;color:#000!important}
+  .no-print{display:none!important}
+  .print-page{page-break-after:always}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ─── INITIAL DATA ─── */
+const INIT_TABS = [
+  {id:"ST01",tabSerial:"YX002LML",kbSerial:"8S5D20R4938401HF9C103A3",condition:"NOT WORKING",issue:""},
+  {id:"ST02",tabSerial:"YX002204",kbSerial:"8S5D20R4938401HF9V700PK",condition:"WORKING",issue:"KEYBOARD ISSUE 7 PRESSING"},
+  {id:"ST03",tabSerial:"YX002KA7",kbSerial:"8S5D20R4938401HF9C1017R",condition:"NOT WORKING",issue:""},
+  {id:"ST04",tabSerial:"YX000D0E",kbSerial:"8S5D20R4938401HF9BB024U",condition:"WORKING",issue:""},
+  {id:"ST05",tabSerial:"YX000Q77",kbSerial:"8S5D20R4938401HF9DF03ME",condition:"WORKING",issue:""},
+  {id:"ST06",tabSerial:"YX000L33",kbSerial:"8S5D20R4938401HF9C100XJ",condition:"WORKING",issue:""},
+  {id:"ST07",tabSerial:"YX002J6V",kbSerial:"8S5D20R4938401HF9C103WX",condition:"WORKING",issue:""},
+  {id:"ST08",tabSerial:"YX000Q6W",kbSerial:"8S5D20R4938401HF9BF046C",condition:"WORKING",issue:""},
+  {id:"ST09",tabSerial:"YX002KQT",kbSerial:"8S5D20R4938401HF9B70122",condition:"WORKING",issue:""},
+  {id:"ST10",tabSerial:"YX002EC4",kbSerial:"8S5D20R4938401HF9C1009D",condition:"WORKING",issue:""},
+  {id:"ST11",tabSerial:"YX001PLD",kbSerial:"8S5D20R4938401HF9BR00H6",condition:"WORKING",issue:""},
+  {id:"ST12",tabSerial:"YX002K7B",kbSerial:"8S5D20R4938401HF9C101PL",condition:"WORKING",issue:""},
+  {id:"ST13",tabSerial:"YX002K3B",kbSerial:"8S5D20R4938401HF9C10170",condition:"WORKING",issue:""},
+  {id:"ST14",tabSerial:"YX002K1K",kbSerial:"8S5D20R4938401HF9C1019M",condition:"NOT WORKING",issue:""},
+  {id:"ST15",tabSerial:"YX002E4X",kbSerial:"8S5D20R4938401HF9BU009P",condition:"WORKING",issue:""},
+  {id:"ST16",tabSerial:"YX002K8P",kbSerial:"8S5D20R4938401HF9C100HJ",condition:"WORKING",issue:""},
+  {id:"ST17",tabSerial:"YX002LOQ",kbSerial:"8S5D20R4938401HF9BD0141",condition:"WORKING",issue:""},
+  {id:"ST18",tabSerial:"YX001B6A",kbSerial:"8S5D20R4938401HF9BR02HV",condition:"WORKING",issue:""},
+  {id:"ST19",tabSerial:"YX002DTP",kbSerial:"8S5D20R4938401HF9DN00QJ",condition:"WORKING",issue:""},
+  {id:"ST20",tabSerial:"YX002L8L",kbSerial:"8S5D20R4938401HF9BU027K",condition:"WORKING",issue:""},
+  {id:"ST21",tabSerial:"YX0026EP",kbSerial:"8S5D20R4938401HF9C101NN",condition:"WORKING",issue:""},
+  {id:"ST22",tabSerial:"YX002J6V",kbSerial:"8S5D20R4938401HF9C103WX",condition:"WORKING",issue:""},
+  {id:"ST23",tabSerial:"YX002K9D",kbSerial:"8S5D20R4938401HF9BU01DE",condition:"WORKING",issue:""},
+  {id:"ST24",tabSerial:"YX002K50",kbSerial:"8S5D20R4938401HF9C100V5",condition:"WORKING",issue:""},
+  {id:"ST25",tabSerial:"YX002KAE",kbSerial:"8S5D20R4938401HF9C101Z2",condition:"WORKING",issue:""},
+  {id:"ST26",tabSerial:"YX002K4V",kbSerial:"8S5D20R4938401HF9C100GW",condition:"NOT WORKING",issue:""},
+  {id:"ST27",tabSerial:"YX002JYE",kbSerial:"8S5D20R4938401HF9C102EM",condition:"WORKING",issue:""},
+  {id:"ST28",tabSerial:"YX002KBA",kbSerial:"8S5B20R4938401HF9C100U2",condition:"WORKING",issue:""},
+  {id:"ST29",tabSerial:"YX002K0Q",kbSerial:"8S5B20R4938401HF9BU01XU",condition:"WORKING",issue:""},
+  {id:"ST30",tabSerial:"YX002JYK",kbSerial:"8S5B20R4938401HF9C10255",condition:"WORKING",issue:""},
+  {id:"ST31",tabSerial:"YX002LMQ",kbSerial:"8S5D20R4938401HF9C1033J",condition:"NOT WORKING",issue:""},
+  {id:"ST32",tabSerial:"YX001Y1A",kbSerial:"8S5B20R4938401HF9BU00K9",condition:"WORKING",issue:""},
+  {id:"ST33",tabSerial:"YX0026RQ",kbSerial:"8S5B20R4938401HF9BD0191",condition:"WORKING",issue:"Space key pressing"},
+  {id:"ST34",tabSerial:"YX002JR5",kbSerial:"8S5B20R4938401HF9C10413",condition:"WORKING",issue:""},
+  {id:"ST35",tabSerial:"YX0025YK",kbSerial:"8S5D20R4938401HF9C102PV",condition:"WORKING",issue:""},
+  {id:"ST36",tabSerial:"YX0012EA",kbSerial:"8S5D20R4938401HF9BE01TY",condition:"WORKING",issue:""},
+  {id:"ST37",tabSerial:"YX001WLM",kbSerial:"8S5D20R4938401HF9BS00XH",condition:"NOT CHARGING",issue:""},
+  {id:"ST38",tabSerial:"YX002K3C",kbSerial:"8S5D20R4938401HF9C10JG",condition:"WORKING",issue:""},
+  {id:"ST39",tabSerial:"YX0023Y8",kbSerial:"8S5D20R4938401HF9C103KQ",condition:"WORKING",issue:""},
+  {id:"ST40",tabSerial:"YX0025P5",kbSerial:"8S5D20R4938401HF9C102MY",condition:"NOT WORKING",issue:""},
+  {id:"ST41",tabSerial:"YX002643",kbSerial:"8S5D20R4938401HF9BU00WM",condition:"WORKING",issue:""},
+  {id:"ST42",tabSerial:"YX001P5B",kbSerial:"8S5D20R4938401HF9BN03AX",condition:"WORKING",issue:""},
+  {id:"ST43",tabSerial:"YX002LDX",kbSerial:"8S5D20R4938401HF9B700EY",condition:"WORKING",issue:""},
+  {id:"TH01",tabSerial:"YX0004YG",kbSerial:"8S5D20R4938401HF9B700CX",condition:"WORKING",issue:""},
+  {id:"TH02",tabSerial:"YX000687",kbSerial:"8S5D20R4938401HF9BU0102",condition:"WORKING",issue:""},
+  {id:"TH03",tabSerial:"YX00080N",kbSerial:"8S5D20R4938401HF9B701DD",condition:"WORKING",issue:""},
+  {id:"TH04",tabSerial:"YX0007RV",kbSerial:"8S5D20R4938401HF9C100KY",condition:"WORKING",issue:"Password problem"},
+  {id:"TH05",tabSerial:"YX0007DV",kbSerial:"8S5D20R4938401HF9C102T9",condition:"WORKING",issue:""},
+  {id:"TH06",tabSerial:"YX001CYF",kbSerial:"8S5D20R4938401HF9C902NW",condition:"WORKING",issue:"Password problem"},
+];
+
+/* ─── FIREBASE ─── */
+const LS_KEY_ISSUES = "bkmv_issues_v2"; // old local data (one-time import)
+const COL_TABS="bkmv_tabs", COL_ISSUES="bkmv_issues";
+let auth=null, db=null, fbError="";
+try{
+  if(typeof firebase==="undefined"||typeof firebaseConfig==="undefined") throw new Error("Firebase config not loaded (check firebase-config.js)");
+  firebase.initializeApp(firebaseConfig);
+  auth=firebase.auth(); db=firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+}catch(e){ fbError=e.message; }
+const clean=o=>JSON.parse(JSON.stringify(o)); // Firestore rejects undefined
+function getLocalIssues(){
+  try{ const d=localStorage.getItem(LS_KEY_ISSUES); return d?JSON.parse(d):[]; }catch(e){return [];}
+}
+
+function LoginScreen(){
+  const [email,setEmail]=useState(""),[pass,setPass]=useState(""),[err,setErr]=useState(""),[busy,setBusy]=useState(false);
+  const go=()=>{
+    if(!email.trim()||!pass){setErr("Enter email and password");return;}
+    setErr("");setBusy(true);
+    auth.signInWithEmailAndPassword(email.trim(),pass)
+      .catch(x=>{setErr(/invalid|wrong|user-not-found|credential/.test(x.code)?"Incorrect email or password":x.message);setBusy(false);});
+  };
+  const inp={width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,padding:"11px 13px",color:"#fff",fontSize:14,marginBottom:10};
+  return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{width:"100%",maxWidth:340,background:"#0a1f4e",border:"1px solid #1d4ed855",borderRadius:16,padding:"28px 24px",textAlign:"center"}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><Logo size={70}/></div>
+        <div style={{fontSize:17,fontWeight:800,marginBottom:4}}>TAB Management System</div>
+        <div style={{fontSize:10,color:"#93c5fd",letterSpacing:1.5,marginBottom:18}}>BKMV HALIELA</div>
+        <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username" style={inp}/>
+        <input type="password" placeholder="Password" value={pass} onChange={e=>setPass(e.target.value)} autoComplete="current-password"
+          onKeyDown={e=>e.key==="Enter"&&go()} style={inp}/>
+        <button onClick={go} disabled={busy} style={{width:"100%",background:"#1d4ed8",color:"#fff",border:"none",borderRadius:9,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",opacity:busy?.6:1}}>
+          🔐 Login
+        </button>
+        {err&&<div style={{color:"#f87171",fontSize:12,marginTop:10}}>{err}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* Auth gate + live Firestore data */
+function Root(){
+  const [user,setUser]=useState(undefined); // undefined = checking
+  const [tabs,setTabs]=useState([]);
+  const [issues,setIssues]=useState([]);
+  const [tabsReady,setTabsReady]=useState(false);
+  const [dataErr,setDataErr]=useState("");
+  const [online,setOnline]=useState(navigator.onLine);
+  const [localCount,setLocalCount]=useState(()=>getLocalIssues().length);
+
+  useEffect(()=>{
+    const on=()=>setOnline(true),off=()=>setOnline(false);
+    window.addEventListener("online",on);window.addEventListener("offline",off);
+    return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);};
+  },[]);
+  useEffect(()=>{ if(!auth){setUser(null);return;} return auth.onAuthStateChanged(u=>setUser(u||null)); },[]);
+
+  useEffect(()=>{
+    if(!user||!db){setTabs([]);setIssues([]);setTabsReady(false);return;}
+    const onErr=e=>setDataErr(e.code==="permission-denied"?"Permission denied: update Firestore rules to allow "+COL_TABS+" and "+COL_ISSUES:e.message);
+    const u1=db.collection(COL_TABS).onSnapshot(snap=>{
+      if(snap.empty&&!snap.metadata.fromCache){ // first run: seed starting tablets
+        const b=db.batch();
+        INIT_TABS.forEach(t=>b.set(db.collection(COL_TABS).doc(t.id),clean(t)));
+        b.commit().catch(onErr);
+      }else{
+        const arr=snap.docs.map(d=>d.data());
+        arr.sort((x,y)=>x.id.localeCompare(y.id,undefined,{numeric:true}));
+        setTabs(arr);setTabsReady(true);
+      }
+    },onErr);
+    const u2=db.collection(COL_ISSUES).onSnapshot(snap=>{
+      const arr=snap.docs.map(d=>d.data());
+      arr.sort((x,y)=>(x.id||"").localeCompare(y.id||"",undefined,{numeric:true}));
+      setIssues(arr);
+    },onErr);
+    return()=>{u1();u2();};
+  },[user]);
+
+  const saveIssue=rec=>db.collection(COL_ISSUES).doc(rec.id).set(clean(rec));
+  const deleteIssue=id=>db.collection(COL_ISSUES).doc(id).delete();
+  const importLocal=async()=>{
+    const list=getLocalIssues();
+    if(!list.length)return;
+    const b=db.batch();
+    list.forEach(r=>b.set(db.collection(COL_ISSUES).doc(String(r.id)),clean({...r,id:String(r.id)})));
+    await b.commit();
+    localStorage.removeItem(LS_KEY_ISSUES);setLocalCount(0);
+  };
+
+  if(fbError) return <div style={{padding:30,color:"#f87171"}}>⚠ {fbError}</div>;
+  if(user===undefined) return <div style={{padding:40,textAlign:"center",color:"#64748b"}}>Loading…</div>;
+  if(!user) return <LoginScreen/>;
+  if(!tabsReady) return <div style={{padding:40,textAlign:"center",color:dataErr?"#f87171":"#64748b"}}>{dataErr||"Loading data…"}</div>;
+  return <App user={user} tabs={tabs} issues={issues} online={online} dataErr={dataErr}
+    onSaveIssue={saveIssue} onDeleteIssue={deleteIssue} onLogout={()=>auth.signOut()}
+    localCount={localCount} onImportLocal={importLocal}/>;
+}
+
+/* ─── QR (real QR-like pattern using serial data) ─── */
+function QRCanvas({value,size=120}){
+  const ref=useRef();
+  useEffect(()=>{
+    const c=ref.current; if(!c)return;
+    const ctx=c.getContext("2d");
+    const dpr=window.devicePixelRatio||1;
+    c.width=size*dpr; c.height=size*dpr;
+    c.style.width=size+"px"; c.style.height=size+"px";
+    ctx.scale(dpr,dpr);
+    const cells=25, cs=size/cells;
+    // White bg
+    ctx.fillStyle="#fff"; ctx.fillRect(0,0,size,size);
+    ctx.fillStyle="#0a2472";
+    // Deterministic data from string
+    const bytes=[...value].map(c=>c.charCodeAt(0));
+    function bit(i){
+      const bi=i%bytes.length;
+      return (bytes[bi]>>(i%8))&1;
+    }
+    // Draw finder patterns (3 corners)
+    function finder(ox,oy){
+      for(let i=0;i<7;i++) for(let j=0;j<7;j++){
+        const outer=i===0||i===6||j===0||j===6;
+        const inner=i>=2&&i<=4&&j>=2&&j<=4;
+        if(outer||inner){ctx.fillRect((ox+j)*cs,(oy+i)*cs,cs-.5,cs-.5);}
+      }
+    }
+    finder(0,0); finder(cells-7,0); finder(0,cells-7);
+    // Timing strips
+    for(let i=8;i<cells-8;i++){
+      if(i%2===0){
+        ctx.fillRect(i*cs,6*cs,cs-.5,cs-.5);
+        ctx.fillRect(6*cs,i*cs,cs-.5,cs-.5);
+      }
+    }
+    // Data modules
+    let bi=0;
+    for(let i=0;i<cells;i++) for(let j=0;j<cells;j++){
+      const inFinder=(i<8&&j<8)||(i<8&&j>=cells-8)||(i>=cells-8&&j<8);
+      const inTiming=(i===6||j===6);
+      if(!inFinder&&!inTiming){
+        if(bit(bi++)) ctx.fillRect(j*cs,i*cs,cs-.5,cs-.5);
+      }
+    }
+  },[value,size]);
+  return <canvas ref={ref} style={{display:"block",borderRadius:2}}/>;
+}
+
+/* ─── LOGO ─── */
+function Logo({size=48}){
+  return(
+    <svg width={size} height={size} viewBox="0 0 200 200" fill="none">
+      <circle cx="100" cy="100" r="95" fill="#0a2472" stroke="#fff" strokeWidth="4"/>
+      <circle cx="100" cy="100" r="68" fill="none" stroke="#fff" strokeWidth="2.5"/>
+      <ellipse cx="100" cy="100" rx="38" ry="68" fill="none" stroke="#fff" strokeWidth="2"/>
+      <ellipse cx="100" cy="100" rx="68" ry="38" fill="none" stroke="#fff" strokeWidth="2"/>
+      <line x1="32" y1="100" x2="168" y2="100" stroke="#fff" strokeWidth="2"/>
+      <line x1="100" y1="32" x2="100" y2="168" stroke="#fff" strokeWidth="2"/>
+      <path d="M100 72C95 82 87 88 90 100C92 111 100 114 100 114C100 114 108 111 110 100C113 88 105 82 100 72Z" fill="#fff"/>
+      <path d="M38 128C43 123 49 126 47 132C45 138 38 135 38 128Z" fill="#fff"/>
+      <path d="M162 128C157 123 151 126 153 132C155 138 162 135 162 128Z" fill="#fff"/>
+    </svg>
+  );
+}
+
+/* ─── STATUS BADGE ─── */
+function Badge({condition,issue,small}){
+  const ok=condition==="WORKING";
+  const charging=condition==="NOT CHARGING";
+  const hi=issue&&issue.trim();
+  let col,lbl;
+  if(charging){col="#f59e0b";lbl="Not Charging";}
+  else if(!ok){col="#ef4444";lbl="Not Working";}
+  else if(hi){col="#f59e0b";lbl="Has Issues";}
+  else{col="#22c55e";lbl="Working";}
+  return(
+    <span style={{display:"inline-flex",alignItems:"center",gap:4,background:col+"22",color:col,
+      border:`1px solid ${col}55`,borderRadius:20,padding:small?"1px 7px":"2px 10px",
+      fontSize:small?9:11,fontWeight:700,letterSpacing:.5,whiteSpace:"nowrap"}}>
+      <span style={{width:5,height:5,borderRadius:"50%",background:col,display:"inline-block",flexShrink:0}}/>
+      {lbl}
+    </span>
+  );
+}
+
+/* ─── ISSUE STATUS BADGE ─── */
+function IssueStatusBadge({status}){
+  const cfg={
+    "ISSUED":{col:"#f59e0b",lbl:"Issued"},
+    "RETURNED":{col:"#22c55e",lbl:"Returned"},
+    "OVERDUE":{col:"#ef4444",lbl:"Overdue"},
+  };
+  const {col,lbl}=cfg[status]||{col:"#64748b",lbl:status};
+  return(
+    <span style={{display:"inline-flex",alignItems:"center",gap:4,background:col+"22",color:col,
+      border:`1px solid ${col}55`,borderRadius:20,padding:"1px 8px",fontSize:10,fontWeight:700,letterSpacing:.5}}>
+      <span style={{width:5,height:5,borderRadius:"50%",background:col,display:"inline-block"}}/>
+      {lbl}
+    </span>
+  );
+}
+
+/* ─── TOAST ─── */
+function Toast({msg,onClose}){
+  useEffect(()=>{const t=setTimeout(onClose,2800);return()=>clearTimeout(t);},[]);
+  return(
+    <div style={{position:"fixed",bottom:24,right:24,zIndex:9999,background:"#1d4ed8",
+      color:"#fff",borderRadius:10,padding:"12px 20px",fontSize:13,fontWeight:600,
+      boxShadow:"0 8px 32px rgba(0,0,0,.5)",border:"1px solid #3b82f655",
+      animation:"slideUp .3s ease"}}>
+      ✓ {msg}
+    </div>
+  );
+}
+
+/* ─── ISSUE FORM MODAL ─── */
+function IssueFormModal({tab, existingIssue, onSave, onClose}){
+  const today=new Date().toISOString().slice(0,10);
+  const [form,setForm]=useState(existingIssue||{
+    tabId:tab.id,teacherName:"",nic:"",issuedDate:today,reason:"",handoverDate:"",status:"ISSUED",notes:""
+  });
+  const set=(k,v)=>setForm(p=>({...p,[k]:v}));
+  const valid=form.teacherName.trim()&&form.nic.trim()&&form.issuedDate&&form.reason.trim();
+
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",
+      backdropFilter:"blur(4px)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"linear-gradient(160deg,#0f2d6e,#071540)",
+        border:"1px solid #3b82f6aa",borderRadius:20,padding:26,maxWidth:500,width:"100%",
+        boxShadow:"0 25px 60px rgba(0,0,0,.8)",maxHeight:"92vh",overflowY:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+          <div style={{background:"#1d4ed820",borderRadius:10,padding:8}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{fontSize:16,fontWeight:800,color:"#fff"}}>{existingIssue?"Edit Issue Record":"New Issue Record"}</div>
+            <div style={{fontSize:12,color:"#64748b"}}>Tab {tab.id} · {tab.tabSerial}</div>
+          </div>
+          <button onClick={onClose} style={{marginLeft:"auto",background:"transparent",border:"none",
+            color:"#64748b",cursor:"pointer",fontSize:18,padding:4}}>✕</button>
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {[
+            ["teacherName","Teacher Full Name","text","eg: W.A. Perera",""],
+            ["nic","NIC Number","text","eg: 199012345678",""],
+          ].map(([key,label,type,placeholder])=>(
+            <div key={key}>
+              <div style={{color:"#94a3b8",fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:5}}>{label.toUpperCase()}</div>
+              <input value={form[key]} onChange={e=>set(key,e.target.value)} type={type}
+                placeholder={placeholder}
+                style={{width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,
+                  padding:"9px 12px",color:"#fff",fontSize:13}}/>
+            </div>
+          ))}
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div>
+              <div style={{color:"#94a3b8",fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:5}}>ISSUED DATE</div>
+              <input type="date" value={form.issuedDate} onChange={e=>set("issuedDate",e.target.value)}
+                style={{width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,
+                  padding:"9px 12px",color:"#fff",fontSize:13,colorScheme:"dark"}}/>
+            </div>
+            <div>
+              <div style={{color:"#94a3b8",fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:5}}>HANDOVER DATE</div>
+              <input type="date" value={form.handoverDate} onChange={e=>set("handoverDate",e.target.value)}
+                style={{width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,
+                  padding:"9px 12px",color:"#fff",fontSize:13,colorScheme:"dark"}}/>
+            </div>
+          </div>
+
+          <div>
+            <div style={{color:"#94a3b8",fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:5}}>REASON FOR ISSUE</div>
+            <textarea value={form.reason} onChange={e=>set("reason",e.target.value)} rows={2}
+              placeholder="eg: Used for Grade 10 ICT practical class"
+              style={{width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,
+                padding:"9px 12px",color:"#fff",fontSize:13,resize:"vertical"}}/>
+          </div>
+
+          <div>
+            <div style={{color:"#94a3b8",fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:5}}>STATUS</div>
+            <select value={form.status} onChange={e=>set("status",e.target.value)}
+              style={{width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,
+                padding:"9px 12px",color:"#fff",fontSize:13}}>
+              <option value="ISSUED">Issued (Not Yet Returned)</option>
+              <option value="RETURNED">Returned</option>
+              <option value="OVERDUE">Overdue</option>
+            </select>
+          </div>
+
+          <div>
+            <div style={{color:"#94a3b8",fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:5}}>NOTES (OPTIONAL)</div>
+            <textarea value={form.notes} onChange={e=>set("notes",e.target.value)} rows={2}
+              placeholder="Any additional notes..."
+              style={{width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,
+                padding:"9px 12px",color:"#fff",fontSize:13,resize:"vertical"}}/>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:10,marginTop:20}}>
+          <button onClick={onClose} style={{flex:1,background:"#0d2d6e",border:"1px solid #1d4ed855",
+            color:"#94a3b8",borderRadius:9,padding:"10px",cursor:"pointer",fontSize:13,fontWeight:600}}>
+            Cancel
+          </button>
+          <button onClick={()=>valid&&onSave({...form,id:existingIssue?.id||Date.now().toString()})}
+            disabled={!valid}
+            style={{flex:2,background:valid?"#1d4ed8":"#0d2d6e",border:"none",
+              color:valid?"#fff":"#475569",borderRadius:9,padding:"10px",cursor:valid?"pointer":"not-allowed",
+              fontSize:13,fontWeight:700,transition:"all .2s"}}>
+            {existingIssue?"Update Record":"Save Issue Record"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── TAB DETAIL MODAL ─── */
+function TabModal({tab, issues, onClose, onAddIssue, onEditIssue, onDeleteIssue}){
+  if(!tab)return null;
+  const isST=tab.id.startsWith("ST");
+  const tabIssues=issues.filter(i=>i.tabId===tab.id).sort((a,b)=>new Date(b.issuedDate)-new Date(a.issuedDate));
+  const activeIssue=tabIssues.find(i=>i.status==="ISSUED");
+
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.88)",
+      backdropFilter:"blur(5px)",zIndex:1500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"linear-gradient(160deg,#0f2d6e,#071540)",
+        border:"1px solid #3b82f6aa",borderRadius:20,padding:24,maxWidth:540,width:"100%",
+        boxShadow:"0 25px 60px rgba(0,0,0,.8)",maxHeight:"92vh",overflowY:"auto",position:"relative"}}>
+        
+        <button onClick={onClose} style={{position:"absolute",top:14,right:14,background:"#ffffff10",
+          border:"none",color:"#94a3b8",cursor:"pointer",fontSize:16,borderRadius:7,padding:"4px 8px"}}>✕</button>
+
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
+          <Logo size={46}/>
+          <div>
+            <div style={{color:"#93c5fd",fontSize:9,letterSpacing:2,fontWeight:600}}>BKMV HALIELA</div>
+            <div style={{color:"#fff",fontSize:22,fontWeight:800}}>{tab.id}</div>
+            <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginTop:3}}>
+              <span style={{display:"inline-block",background:isST?"#1d4ed833":"#7c3aed33",
+                color:isST?"#93c5fd":"#c4b5fd",border:`1px solid ${isST?"#1d4ed8":"#7c3aed"}55`,
+                borderRadius:20,padding:"1px 9px",fontSize:9,fontWeight:700}}>
+                {isST?"STUDENT TAB":"TEACHER TAB"}
+              </span>
+              <Badge condition={tab.condition} issue={tab.issue} small/>
+              {activeIssue&&<IssueStatusBadge status="ISSUED"/>}
+            </div>
+          </div>
+        </div>
+
+        {/* QR */}
+        <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
+          <div style={{background:"#fff",borderRadius:12,padding:12,boxShadow:"0 0 30px rgba(59,130,246,.25)"}}>
+            <QRCanvas value={`BKMV-HALIELA|${tab.id}|${tab.tabSerial}|${tab.kbSerial}`} size={140}/>
+            <div style={{textAlign:"center",marginTop:5,color:"#0a2472",fontSize:9,fontWeight:700,letterSpacing:1}}>
+              BKMV HALIELA · {tab.id}
+            </div>
+          </div>
+        </div>
+
+        {/* Device Info */}
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+          {[["Tab Serial",tab.tabSerial],["Keyboard Serial",tab.kbSerial],["Condition",tab.condition]].map(([l,v])=>(
+            <div key={l} style={{background:"#ffffff0a",borderRadius:9,padding:"8px 12px",border:"1px solid #ffffff10",
+              display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <div style={{color:"#64748b",fontSize:9,fontWeight:700,letterSpacing:1.5}}>{l.toUpperCase()}</div>
+              <div style={{color:"#e2e8f0",fontFamily:"monospace",fontSize:12}}>{v}</div>
+            </div>
+          ))}
+          {tab.issue&&tab.issue.trim()&&(
+            <div style={{background:"#fbbf2412",borderRadius:9,padding:"8px 12px",border:"1px solid #fbbf2440"}}>
+              <div style={{color:"#fbbf24",fontSize:9,fontWeight:700,letterSpacing:1.5,marginBottom:2}}>⚠ KNOWN DEVICE ISSUE</div>
+              <div style={{color:"#fde68a",fontSize:12}}>{tab.issue}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Issue History */}
+        <div style={{borderTop:"1px solid #ffffff15",paddingTop:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{color:"#93c5fd",fontSize:11,fontWeight:700,letterSpacing:1}}>
+              📋 ISSUE RECORDS ({tabIssues.length})
+            </div>
+            <button onClick={onAddIssue} style={{background:"#1d4ed8",border:"none",color:"#fff",
+              borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
+              + New Issue
+            </button>
+          </div>
+
+          {tabIssues.length===0&&(
+            <div style={{textAlign:"center",padding:"20px",color:"#475569",fontSize:12}}>
+              No issue records yet. Click "+ New Issue" to add one.
+            </div>
+          )}
+
+          {tabIssues.map(rec=>(
+            <div key={rec.id} style={{background:"#0d2d6e44",border:"1px solid #1d4ed820",borderRadius:10,
+              padding:12,marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,flexWrap:"wrap",gap:6}}>
+                <div>
+                  <div style={{color:"#fff",fontSize:13,fontWeight:700}}>{rec.teacherName}</div>
+                  <div style={{color:"#64748b",fontSize:10,marginTop:1}}>NIC: {rec.nic}</div>
+                </div>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <IssueStatusBadge status={rec.status}/>
+                  <button onClick={()=>onEditIssue(rec)} style={{background:"#1d4ed820",border:"1px solid #1d4ed840",
+                    color:"#93c5fd",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10}}>Edit</button>
+                  <button onClick={()=>onDeleteIssue(rec.id)} style={{background:"#ef444415",border:"1px solid #ef444430",
+                    color:"#f87171",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:10}}>Del</button>
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:11}}>
+                <div style={{background:"#ffffff08",borderRadius:6,padding:"5px 8px"}}>
+                  <div style={{color:"#64748b",fontSize:9,fontWeight:600,letterSpacing:1}}>ISSUED DATE</div>
+                  <div style={{color:"#cbd5e1"}}>{rec.issuedDate||"—"}</div>
+                </div>
+                <div style={{background:"#ffffff08",borderRadius:6,padding:"5px 8px"}}>
+                  <div style={{color:"#64748b",fontSize:9,fontWeight:600,letterSpacing:1}}>HANDOVER DATE</div>
+                  <div style={{color:"#cbd5e1"}}>{rec.handoverDate||"Not yet returned"}</div>
+                </div>
+              </div>
+              {rec.reason&&(
+                <div style={{marginTop:6,background:"#ffffff08",borderRadius:6,padding:"5px 8px",fontSize:11}}>
+                  <div style={{color:"#64748b",fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:2}}>REASON</div>
+                  <div style={{color:"#cbd5e1"}}>{rec.reason}</div>
+                </div>
+              )}
+              {rec.notes&&(
+                <div style={{marginTop:4,background:"#fbbf2408",borderRadius:6,padding:"5px 8px",fontSize:10,color:"#fde68a"}}>
+                  📝 {rec.notes}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:"flex",gap:10,marginTop:14}}>
+          <button onClick={onClose} style={{flex:1,background:"#0d2d6e",border:"1px solid #1d4ed855",
+            color:"#94a3b8",borderRadius:9,padding:"9px",cursor:"pointer",fontSize:13,fontWeight:600}}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── CARD ─── */
+function Card({tab,issues,onClick}){
+  const ok=tab.condition==="WORKING";
+  const hi=tab.issue&&tab.issue.trim();
+  const notOk=!ok||tab.condition==="NOT CHARGING";
+  const bc=notOk?"#ef444433":hi?"#f59e0b33":"#22c55e22";
+  const isST=tab.id.startsWith("ST");
+  const [hov,setHov]=useState(false);
+  const tabIssues=issues.filter(i=>i.tabId===tab.id);
+  const activeIssue=tabIssues.find(i=>i.status==="ISSUED");
+
+  return(
+    <div onClick={()=>onClick(tab)}
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{background:"linear-gradient(135deg,#0d2d6e,#0a1f4e)",
+        border:`1px solid ${hov?"#3b82f6aa":bc}`,
+        borderRadius:14,padding:13,cursor:"pointer",transition:"all .2s",
+        display:"flex",flexDirection:"column",gap:8,position:"relative",overflow:"hidden",
+        transform:hov?"translateY(-3px)":"none",
+        boxShadow:hov?"0 8px 30px rgba(10,36,114,.5)":"none"}}>
+      <div style={{position:"absolute",top:0,right:0,background:isST?"#1d4ed8":"#7c3aed",
+        color:"#fff",fontSize:7,fontWeight:800,padding:"2px 8px",borderBottomLeftRadius:7,letterSpacing:1}}>
+        {isST?"STUDENT":"TEACHER"}
+      </div>
+      {activeIssue&&(
+        <div style={{position:"absolute",top:0,left:0,background:"#f59e0b",
+          color:"#000",fontSize:7,fontWeight:800,padding:"2px 8px",borderBottomRightRadius:7,letterSpacing:1}}>
+          ISSUED
+        </div>
+      )}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginTop:activeIssue?8:0}}>
+        <div>
+          <div style={{color:"#93c5fd",fontSize:9,fontWeight:600,letterSpacing:2,marginBottom:1}}>TAB ID</div>
+          <div style={{color:"#fff",fontSize:19,fontWeight:800,letterSpacing:1}}>{tab.id}</div>
+        </div>
+        <QRCanvas value={`BKMV|${tab.id}|${tab.tabSerial}`} size={52}/>
+      </div>
+      <div style={{borderTop:"1px solid #ffffff15",paddingTop:6}}>
+        <div style={{color:"#64748b",fontSize:8,fontWeight:600,letterSpacing:1,marginBottom:1}}>TAB SERIAL</div>
+        <div style={{color:"#cbd5e1",fontSize:11,fontFamily:"monospace"}}>{tab.tabSerial}</div>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:3}}>
+        <Badge condition={tab.condition} issue={tab.issue} small/>
+        {tabIssues.length>0&&(
+          <span style={{color:"#93c5fd",fontSize:9,fontWeight:600}}>
+            📋 {tabIssues.length} record{tabIssues.length>1?"s":""}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── PDF PRINT VIEW ─── */
+function PrintIssuePDF({issues, tabs, filter, onClose}){
+  const printIssues=issues.filter(i=>filter==="ALL"||i.status===filter);
+  const getTab=id=>tabs.find(t=>t.id===id)||{};
+
+  useEffect(()=>{
+    const style=document.createElement("style");
+    style.id="print-override";
+    style.innerHTML=`@media print{body{background:#fff!important;color:#000!important}.no-print{display:none!important}}`;
+    document.head.appendChild(style);
+    return()=>document.getElementById("print-override")?.remove();
+  },[]);
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"#fff",zIndex:5000,overflowY:"auto"}}>
+      {/* Print controls */}
+      <div className="no-print" style={{background:"#0a2472",padding:"12px 20px",display:"flex",
+        gap:12,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",
+        position:"sticky",top:0,zIndex:1}}>
+        <div style={{color:"#fff",fontWeight:700,fontSize:14}}>
+          📄 Print Preview — {printIssues.length} Records
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>window.print()} style={{background:"#22c55e",border:"none",color:"#fff",
+            borderRadius:8,padding:"8px 20px",cursor:"pointer",fontSize:13,fontWeight:700}}>
+            🖨️ Print / Save PDF
+          </button>
+          <button onClick={onClose} style={{background:"#ef4444",border:"none",color:"#fff",
+            borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:13,fontWeight:700}}>
+            ✕ Close
+          </button>
+        </div>
+      </div>
+
+      {/* A4 page */}
+      <div style={{maxWidth:794,margin:"24px auto",background:"#fff",color:"#000",fontFamily:"Arial,sans-serif",
+        padding:"40px 50px",boxShadow:"0 4px 40px rgba(0,0,0,.2)"}}>
+        {/* Report header */}
+        <div style={{borderBottom:"3px solid #0a2472",paddingBottom:16,marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontSize:18,fontWeight:900,color:"#0a2472",letterSpacing:.5}}>
+              BIDENZIL KOBBEKADUWA MAHA VIDYALAYA
+            </div>
+            <div style={{fontSize:13,color:"#1d4ed8",fontWeight:700,marginTop:2}}>HALIELA</div>
+            <div style={{fontSize:11,color:"#64748b",marginTop:4}}>TAB ISSUANCE REPORT</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:10,color:"#64748b"}}>Generated</div>
+            <div style={{fontSize:11,fontWeight:700,color:"#0a2472"}}>{new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</div>
+            <div style={{fontSize:10,color:"#64748b",marginTop:4}}>Total Records: {printIssues.length}</div>
+            <div style={{fontSize:10,color:"#64748b"}}>Status Filter: {filter==="ALL"?"All":filter}</div>
+          </div>
+        </div>
+
+        {/* Summary row */}
+        <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+          {[
+            ["Total Issued",issues.filter(i=>i.status==="ISSUED").length,"#f59e0b"],
+            ["Returned",issues.filter(i=>i.status==="RETURNED").length,"#22c55e"],
+            ["Overdue",issues.filter(i=>i.status==="OVERDUE").length,"#ef4444"],
+            ["Total Records",issues.length,"#0a2472"],
+          ].map(([l,v,c])=>(
+            <div key={l} style={{flex:1,minWidth:100,background:c+"15",border:`2px solid ${c}`,
+              borderRadius:8,padding:"8px 12px",textAlign:"center"}}>
+              <div style={{fontSize:20,fontWeight:900,color:c}}>{v}</div>
+              <div style={{fontSize:9,fontWeight:700,color:"#64748b",letterSpacing:.5}}>{l.toUpperCase()}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Table */}
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:10}}>
+          <thead>
+            <tr style={{background:"#0a2472",color:"#fff"}}>
+              {["#","Tab ID","Tab Serial","Teacher Name","NIC","Issued Date","Handover Date","Reason","Status"].map(h=>(
+                <th key={h} style={{padding:"7px 6px",textAlign:"left",fontWeight:700,fontSize:9,letterSpacing:.5}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {printIssues.map((rec,idx)=>{
+              const tab=getTab(rec.tabId);
+              const statusColors={"ISSUED":"#f59e0b","RETURNED":"#22c55e","OVERDUE":"#ef4444"};
+              const sc=statusColors[rec.status]||"#64748b";
+              return(
+                <tr key={rec.id} style={{background:idx%2===0?"#f8fafc":"#fff",borderBottom:"1px solid #e2e8f0"}}>
+                  <td style={{padding:"6px 6px",color:"#64748b"}}>{idx+1}</td>
+                  <td style={{padding:"6px 6px",fontWeight:700,color:"#0a2472"}}>{rec.tabId}</td>
+                  <td style={{padding:"6px 6px",fontFamily:"monospace",fontSize:8,color:"#334155"}}>{tab.tabSerial||"—"}</td>
+                  <td style={{padding:"6px 6px",fontWeight:600}}>{rec.teacherName}</td>
+                  <td style={{padding:"6px 6px",fontFamily:"monospace",fontSize:9}}>{rec.nic}</td>
+                  <td style={{padding:"6px 6px"}}>{rec.issuedDate||"—"}</td>
+                  <td style={{padding:"6px 6px"}}>{rec.handoverDate||"—"}</td>
+                  <td style={{padding:"6px 6px",maxWidth:120,wordBreak:"break-word"}}>{rec.reason}</td>
+                  <td style={{padding:"6px 6px"}}>
+                    <span style={{background:sc+"22",color:sc,border:`1px solid ${sc}55`,
+                      borderRadius:10,padding:"1px 6px",fontSize:8,fontWeight:700}}>{rec.status}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {printIssues.length===0&&(
+          <div style={{textAlign:"center",padding:"40px",color:"#94a3b8",fontSize:13}}>
+            No records to display for this filter.
+          </div>
+        )}
+
+        {/* QR codes section */}
+        {printIssues.length>0&&(
+          <div style={{marginTop:30,borderTop:"2px solid #0a2472",paddingTop:20}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#0a2472",marginBottom:16,letterSpacing:.5}}>
+              QR CODE REFERENCE
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+              {printIssues.slice(0,20).map(rec=>{
+                const tab=getTab(rec.tabId);
+                return(
+                  <div key={rec.id} style={{border:"1px solid #e2e8f0",borderRadius:8,padding:8,
+                    textAlign:"center",minWidth:100}}>
+                    <QRCanvas value={`BKMV-HALIELA|${rec.tabId}|${tab.tabSerial||""}|${rec.teacherName}|${rec.issuedDate}`} size={80}/>
+                    <div style={{fontSize:8,fontWeight:700,color:"#0a2472",marginTop:4}}>{rec.tabId}</div>
+                    <div style={{fontSize:7,color:"#64748b",marginTop:1}}>{rec.teacherName.split(" ")[0]}</div>
+                  </div>
+                );
+              })}
+            </div>
+            {printIssues.length>20&&(
+              <div style={{fontSize:9,color:"#94a3b8",marginTop:8}}>
+                * Showing QR codes for first 20 records only.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{marginTop:30,borderTop:"1px solid #e2e8f0",paddingTop:12,
+          display:"flex",justifyContent:"space-between",fontSize:9,color:"#94a3b8"}}>
+          <span>BKMV HALIELA · TAB MANAGEMENT SYSTEM</span>
+          <span>Generated on {new Date().toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── QR PRINT PAGE ─── */
+function PrintQRPage({tabs, onClose}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"#fff",zIndex:5000,overflowY:"auto"}}>
+      <div className="no-print" style={{background:"#0a2472",padding:"12px 20px",display:"flex",
+        gap:12,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",position:"sticky",top:0,zIndex:1}}>
+        <div style={{color:"#fff",fontWeight:700,fontSize:14}}>🔲 Print All QR Codes — {tabs.length} Tabs</div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>window.print()} style={{background:"#22c55e",border:"none",color:"#fff",
+            borderRadius:8,padding:"8px 20px",cursor:"pointer",fontSize:13,fontWeight:700}}>
+            🖨️ Print / Save PDF
+          </button>
+          <button onClick={onClose} style={{background:"#ef4444",border:"none",color:"#fff",
+            borderRadius:8,padding:"8px 16px",cursor:"pointer",fontSize:13,fontWeight:700}}>✕ Close</button>
+        </div>
+      </div>
+      <div style={{maxWidth:794,margin:"24px auto",background:"#fff",color:"#000",fontFamily:"Arial,sans-serif",padding:"30px 40px"}}>
+        <div style={{borderBottom:"3px solid #0a2472",paddingBottom:12,marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:900,color:"#0a2472"}}>BIDENZIL KOBBEKADUWA MAHA VIDYALAYA · HALIELA</div>
+            <div style={{fontSize:11,color:"#64748b",marginTop:2}}>TAB QR CODE REFERENCE SHEET</div>
+          </div>
+          <div style={{fontSize:10,color:"#64748b",textAlign:"right"}}>
+            {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10}}>
+          {tabs.map(tab=>(
+            <div key={tab.id} style={{border:"1px solid #e2e8f0",borderRadius:8,padding:7,textAlign:"center",
+              background:tab.id.startsWith("TH")?"#f5f3ff":"#f0f9ff"}}>
+              <QRCanvas value={`BKMV-HALIELA|${tab.id}|${tab.tabSerial}|${tab.kbSerial}`} size={75}/>
+              <div style={{fontSize:9,fontWeight:800,color:"#0a2472",marginTop:4}}>{tab.id}</div>
+              <div style={{fontSize:7,color:"#64748b",fontFamily:"monospace",marginTop:1,
+                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {tab.tabSerial}
+              </div>
+              <div style={{fontSize:6,color:tab.id.startsWith("TH")?"#7c3aed":"#1d4ed8",
+                fontWeight:700,marginTop:2}}>{tab.id.startsWith("TH")?"TEACHER":"STUDENT"}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{marginTop:20,borderTop:"1px solid #e2e8f0",paddingTop:10,fontSize:9,
+          color:"#94a3b8",display:"flex",justifyContent:"space-between"}}>
+          <span>BKMV HALIELA · TAB MANAGEMENT SYSTEM · Total: {tabs.length} devices</span>
+          <span>{new Date().toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── ISSUE RECORDS PAGE ─── */
+function IssueRecordsPage({issues, tabs, onEdit, onDelete, onAdd}){
+  const [search,setSearch]=useState("");
+  const [statusFilter,setStatusFilter]=useState("ALL");
+  const [printFilter,setPrintFilter]=useState(null);
+
+  const filtered=issues.filter(i=>{
+    const s=search.toLowerCase();
+    const ms=!s||i.teacherName.toLowerCase().includes(s)||i.nic.toLowerCase().includes(s)||i.tabId.toLowerCase().includes(s);
+    const mf=statusFilter==="ALL"||i.status===statusFilter;
+    return ms&&mf;
+  }).sort((a,b)=>new Date(b.issuedDate)-new Date(a.issuedDate));
+
+  const getTab=id=>tabs.find(t=>t.id===id)||{};
+
+  if(printFilter!==null) return <PrintIssuePDF issues={issues} tabs={tabs} filter={printFilter} onClose={()=>setPrintFilter(null)}/>;
+
+  return(
+    <div style={{padding:"20px"}}>
+      {/* Stats */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:18}}>
+        {[
+          ["All Records",issues.length,"#3b82f6"],
+          ["Currently Issued",issues.filter(i=>i.status==="ISSUED").length,"#f59e0b"],
+          ["Returned",issues.filter(i=>i.status==="RETURNED").length,"#22c55e"],
+          ["Overdue",issues.filter(i=>i.status==="OVERDUE").length,"#ef4444"],
+        ].map(([l,v,c])=>(
+          <div key={l} style={{background:c+"15",border:`1px solid ${c}40`,borderRadius:9,
+            padding:"8px 16px",minWidth:90,textAlign:"center",flex:1}}>
+            <div style={{color:c,fontSize:20,fontWeight:800}}>{v}</div>
+            <div style={{color:"#94a3b8",fontSize:9,letterSpacing:.5,fontWeight:600}}>{l.toUpperCase()}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Controls */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16,alignItems:"center"}}>
+        <div style={{position:"relative",flex:1,minWidth:160}}>
+          <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"#64748b",fontSize:13}}>🔍</span>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by teacher, NIC, tab ID..."
+            style={{width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,
+              padding:"9px 11px 9px 32px",color:"#fff",fontSize:13}}/>
+        </div>
+        <div style={{display:"flex",gap:3,background:"#0a1f4e",borderRadius:9,padding:3,border:"1px solid #1d4ed830"}}>
+          {[["ALL","All"],["ISSUED","Issued"],["RETURNED","Returned"],["OVERDUE","Overdue"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setStatusFilter(v)} style={{background:statusFilter===v?"#1d4ed8":"transparent",
+              color:statusFilter===v?"#fff":"#64748b",border:"none",borderRadius:6,padding:"5px 10px",
+              cursor:"pointer",fontSize:11,fontWeight:600}}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={()=>setPrintFilter(statusFilter)} style={{background:"#0a2472",border:"1px solid #1d4ed855",
+            color:"#93c5fd",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+            📄 Print Report
+          </button>
+          <button onClick={()=>setPrintFilter("ALL")} style={{background:"#0a2472",border:"1px solid #1d4ed855",
+            color:"#93c5fd",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+            📊 Full Report
+          </button>
+        </div>
+      </div>
+
+      <div style={{color:"#64748b",fontSize:11,marginBottom:12,letterSpacing:.5}}>
+        Showing {filtered.length} of {issues.length} records
+      </div>
+
+      {/* Records table */}
+      {filtered.length===0?(
+        <div style={{textAlign:"center",padding:"50px",color:"#475569"}}>
+          <div style={{fontSize:32,marginBottom:10}}>📋</div>
+          <div style={{fontSize:14,fontWeight:600}}>No issue records found</div>
+          <div style={{fontSize:12,marginTop:5}}>Records appear here when a tab is issued to a teacher</div>
+        </div>
+      ):(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {filtered.map(rec=>{
+            const tab=getTab(rec.tabId);
+            return(
+              <div key={rec.id} style={{background:"#0d2d6e44",border:"1px solid #1d4ed820",borderRadius:11,
+                padding:"12px 14px",display:"grid",gap:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+                  <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+                    <div>
+                      <div style={{color:"#93c5fd",fontSize:10,fontWeight:700,letterSpacing:1}}>TAB</div>
+                      <div style={{color:"#fff",fontSize:15,fontWeight:800}}>{rec.tabId}</div>
+                    </div>
+                    <div>
+                      <div style={{color:"#64748b",fontSize:10,fontWeight:700,letterSpacing:1}}>TEACHER</div>
+                      <div style={{color:"#e2e8f0",fontSize:13,fontWeight:600}}>{rec.teacherName}</div>
+                    </div>
+                    <div>
+                      <div style={{color:"#64748b",fontSize:10,fontWeight:700,letterSpacing:1}}>NIC</div>
+                      <div style={{color:"#cbd5e1",fontSize:12,fontFamily:"monospace"}}>{rec.nic}</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <IssueStatusBadge status={rec.status}/>
+                    <button onClick={()=>onEdit(rec)} style={{background:"#1d4ed820",border:"1px solid #1d4ed840",
+                      color:"#93c5fd",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>Edit</button>
+                    <button onClick={()=>onDelete(rec.id)} style={{background:"#ef444415",border:"1px solid #ef444430",
+                      color:"#f87171",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:600}}>Delete</button>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <div style={{background:"#ffffff08",borderRadius:7,padding:"5px 10px",fontSize:11,flex:1,minWidth:120}}>
+                    <div style={{color:"#64748b",fontSize:9,fontWeight:700,letterSpacing:1,marginBottom:1}}>ISSUED DATE</div>
+                    <div style={{color:"#cbd5e1"}}>{rec.issuedDate||"—"}</div>
+                  </div>
+                  <div style={{background:"#ffffff08",borderRadius:7,padding:"5px 10px",fontSize:11,flex:1,minWidth:120}}>
+                    <div style={{color:"#64748b",fontSize:9,fontWeight:700,letterSpacing:1,marginBottom:1}}>HANDOVER DATE</div>
+                    <div style={{color:"#cbd5e1"}}>{rec.handoverDate||"Not returned"}</div>
+                  </div>
+                  {rec.reason&&(
+                    <div style={{background:"#ffffff08",borderRadius:7,padding:"5px 10px",fontSize:11,flex:2,minWidth:160}}>
+                      <div style={{color:"#64748b",fontSize:9,fontWeight:700,letterSpacing:1,marginBottom:1}}>REASON</div>
+                      <div style={{color:"#cbd5e1"}}>{rec.reason}</div>
+                    </div>
+                  )}
+                </div>
+                {rec.notes&&(
+                  <div style={{background:"#fbbf2408",borderRadius:7,padding:"5px 10px",fontSize:10,color:"#fde68a"}}>
+                    📝 {rec.notes}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── MAIN APP ─── */
+function App({user,tabs,issues,online,dataErr,onSaveIssue,onDeleteIssue,onLogout,localCount,onImportLocal}){
+  const [search,setSearch]=useState("");
+  const [filter,setFilter]=useState("ALL");
+  const [typeFilter,setTypeFilter]=useState("ALL");
+  const [selectedTab,setSelectedTab]=useState(null);
+  const [view,setView]=useState("grid");
+  const [page,setPage]=useState("tabs"); // tabs | records
+  const [issueFormFor,setIssueFormFor]=useState(null); // {tab, existingIssue}
+  const [toast,setToast]=useState(null);
+  const [showQRPrint,setShowQRPrint]=useState(false);
+
+
+  const showToast=msg=>{setToast(msg);};
+
+  const handleSaveIssue=useCallback((rec)=>{
+    const wasEdit=!!issueFormFor?.existingIssue;
+    onSaveIssue(rec).catch(e=>showToast("Save failed: "+e.message));
+    setIssueFormFor(null);
+    showToast(wasEdit?"Issue record updated":"Issue record saved");
+  },[issueFormFor,onSaveIssue]);
+
+  const handleDeleteIssue=useCallback((id)=>{
+    if(!window.confirm("Delete this issue record?"))return;
+    onDeleteIssue(id).catch(e=>showToast("Delete failed: "+e.message));
+    showToast("Record deleted");
+  },[onDeleteIssue]);
+
+  const total=tabs.length;
+  const working=tabs.filter(t=>t.condition==="WORKING"&&!t.issue?.trim()).length;
+  const issueCount=tabs.filter(t=>t.condition==="WORKING"&&t.issue?.trim()).length;
+  const broken=tabs.filter(t=>t.condition!=="WORKING").length;
+  const activeIssues=issues.filter(i=>i.status==="ISSUED").length;
+
+  const filtered=tabs.filter(t=>{
+    const s=search.toLowerCase();
+    const ms=!s||t.id.toLowerCase().includes(s)||t.tabSerial.toLowerCase().includes(s)||t.kbSerial.toLowerCase().includes(s);
+    const ok=t.condition==="WORKING"; const hi=t.issue?.trim();
+    const mf=filter==="ALL"||(filter==="WORKING"&&ok&&!hi)||(filter==="ISSUES"&&ok&&hi)||(filter==="NOT_WORKING"&&!ok);
+    const mt=typeFilter==="ALL"||(typeFilter==="ST"&&t.id.startsWith("ST"))||(typeFilter==="TH"&&t.id.startsWith("TH"));
+    return ms&&mf&&mt;
+  });
+
+  if(showQRPrint) return <PrintQRPage tabs={tabs} onClose={()=>setShowQRPrint(false)}/>;
+
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(180deg,#050f2e 0%,#071540 40%,#060d28 100%)"}}>
+      {/* HEADER */}
+      <div className="no-print" style={{background:"linear-gradient(135deg,#0a2472,#0d3099)",
+        borderBottom:"2px solid #1d4ed855",padding:"14px 20px",position:"sticky",top:0,zIndex:100,
+        boxShadow:"0 4px 20px rgba(0,0,0,.5)"}}>
+        <div style={{maxWidth:1200,margin:"0 auto"}}>
+          <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap",marginBottom:8}}>
+            <Logo size={50}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:8,letterSpacing:3,color:"#93c5fd",fontWeight:600}}>BIDENZIL KOBBEKADUWA MAHA VIDYALAYA · HALIELA</div>
+              <div style={{fontSize:17,fontWeight:800,letterSpacing:.5}}>TAB Management System</div>
+              <div style={{fontSize:9,color:"#64748b",letterSpacing:1}}>LET'S ENTER THE WORLD WITH KNOWLEDGE</div>
+            </div>
+            <div className="stat-grid" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[
+                [total,"Total","#3b82f6"],
+                [working,"Working","#22c55e"],
+                [issueCount,"Issues","#f59e0b"],
+                [broken,"Faults","#ef4444"],
+                [activeIssues,"Issued Out","#a855f7"],
+              ].map(([v,l,c])=>(
+                <div key={l} className="stat-box" style={{background:c+"15",border:`1px solid ${c}40`,
+                  borderRadius:9,padding:"4px 11px",textAlign:"center",minWidth:60}}>
+                  <div style={{color:c,fontSize:17,fontWeight:800}}>{v}</div>
+                  <div style={{color:"#94a3b8",fontSize:7,letterSpacing:.5,fontWeight:600}}>{l.toUpperCase()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Page tabs */}
+          <div style={{display:"flex",gap:0,borderBottom:"1px solid #ffffff15"}}>
+            <button className={`tab-btn${page==="tabs"?" active":""}`} onClick={()=>setPage("tabs")}>
+              📱 Tablets ({total})
+            </button>
+            <button className={`tab-btn${page==="records"?" active":""}`} onClick={()=>setPage("records")}>
+              📋 Issue Records ({issues.length})
+            </button>
+            <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center",paddingBottom:4,flexWrap:"wrap"}}>
+              <span style={{fontSize:10,fontWeight:700,color:online?"#4ade80":"#fb923c"}}>{online?"🟢 Live":"🟠 Offline"}</span>
+              <span className="issue-col-hide" style={{fontSize:10,color:"#64748b"}}>{user.email}</span>
+              {localCount>0&&<button onClick={()=>onImportLocal().then(()=>showToast("Local records uploaded")).catch(e=>showToast("Upload failed: "+e.message))}
+                style={{background:"#7c3aed",border:"none",color:"#fff",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:600}}>
+                ☁️ Upload {localCount} local records
+              </button>}
+              <button onClick={()=>setShowQRPrint(true)} style={{background:"#0a2472",border:"1px solid #1d4ed855",
+                color:"#93c5fd",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:600}}>
+                🔲 Print All QR
+              </button>
+              <button onClick={onLogout} style={{background:"transparent",border:"1px solid #ffffff25",
+                color:"#94a3b8",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:11,fontWeight:600}}>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PAGE CONTENT */}
+      <div style={{maxWidth:1200,margin:"0 auto"}}>
+        {page==="tabs"&&(
+          <div style={{padding:"18px 20px"}}>
+            {/* Filters */}
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
+              <div style={{position:"relative",flex:1,minWidth:180}}>
+                <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",color:"#64748b",fontSize:13}}>🔍</span>
+                <input value={search} onChange={e=>setSearch(e.target.value)}
+                  placeholder="Search ID or serial..."
+                  style={{width:"100%",background:"#0d2d6e",border:"1px solid #1d4ed855",borderRadius:9,
+                    padding:"9px 11px 9px 33px",color:"#fff",fontSize:13}}/>
+              </div>
+              <div style={{display:"flex",gap:3,background:"#0a1f4e",borderRadius:9,padding:3,border:"1px solid #1d4ed830"}}>
+                {[["ALL","All"],["WORKING","✓ OK"],["ISSUES","⚠ Issues"],["NOT_WORKING","✗ Fault"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setFilter(v)} style={{background:filter===v?"#1d4ed8":"transparent",
+                    color:filter===v?"#fff":"#64748b",border:"none",borderRadius:6,padding:"5px 10px",
+                    cursor:"pointer",fontSize:11,fontWeight:600}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:3,background:"#0a1f4e",borderRadius:9,padding:3,border:"1px solid #1d4ed830"}}>
+                {[["ALL","All"],["ST","Students"],["TH","Teachers"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setTypeFilter(v)} style={{background:typeFilter===v?"#7c3aed":"transparent",
+                    color:typeFilter===v?"#fff":"#64748b",border:"none",borderRadius:6,padding:"5px 10px",
+                    cursor:"pointer",fontSize:11,fontWeight:600}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:3,background:"#0a1f4e",borderRadius:9,padding:3,border:"1px solid #1d4ed830"}}>
+                {[["grid","⊞"],["list","☰"]].map(([v,ic])=>(
+                  <button key={v} onClick={()=>setView(v)} style={{background:view===v?"#1d4ed8":"transparent",
+                    color:view===v?"#fff":"#64748b",border:"none",borderRadius:6,padding:"5px 9px",
+                    cursor:"pointer",fontSize:15}}>
+                    {ic}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{color:"#64748b",fontSize:11,marginBottom:12,letterSpacing:.5}}>
+              Showing {filtered.length} of {tabs.length} tablets · Click any card for details &amp; issue records
+            </div>
+
+            {view==="grid"&&(
+              <div className="tab-cards" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:11}}>
+                {filtered.map(t=><Card key={t.id} tab={t} issues={issues} onClick={setSelectedTab}/>)}
+              </div>
+            )}
+
+            {view==="list"&&(
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <div style={{display:"grid",gridTemplateColumns:"70px 54px 1fr 1fr 110px 80px 60px",
+                  gap:10,padding:"7px 14px",color:"#64748b",fontSize:9,fontWeight:700,letterSpacing:1.5,
+                  borderBottom:"1px solid #ffffff10"}}>
+                  <span>ID</span><span>QR</span><span>TAB SERIAL</span>
+                  <span className="issue-col-hide">KB SERIAL</span><span>STATUS</span>
+                  <span className="issue-col-hide">RECORDS</span><span>ISSUED</span>
+                </div>
+                {filtered.map(t=>{
+                  const tIssues=issues.filter(i=>i.tabId===t.id);
+                  const active=tIssues.find(i=>i.status==="ISSUED");
+                  return(
+                    <div key={t.id} onClick={()=>setSelectedTab(t)}
+                      style={{display:"grid",gridTemplateColumns:"70px 54px 1fr 1fr 110px 80px 60px",
+                        gap:10,padding:"9px 14px",background:"#0d2d6e44",border:"1px solid #1d4ed820",
+                        borderRadius:9,cursor:"pointer",alignItems:"center",transition:"background .15s"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#1d4ed822"}
+                      onMouseLeave={e=>e.currentTarget.style.background="#0d2d6e44"}>
+                      <span style={{fontWeight:800,color:"#fff",fontSize:13}}>{t.id}</span>
+                      <QRCanvas value={`BKMV|${t.id}|${t.tabSerial}`} size={44}/>
+                      <span style={{fontFamily:"monospace",color:"#cbd5e1",fontSize:10}}>{t.tabSerial}</span>
+                      <span className="issue-col-hide" style={{fontFamily:"monospace",color:"#94a3b8",fontSize:9}}>{t.kbSerial}</span>
+                      <Badge condition={t.condition} issue={t.issue} small/>
+                      <span className="issue-col-hide" style={{color:"#93c5fd",fontSize:10}}>{tIssues.length>0?`${tIssues.length} rec`:"—"}</span>
+                      {active?<IssueStatusBadge status="ISSUED"/>:<span style={{color:"#475569",fontSize:10}}>—</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {filtered.length===0&&(
+              <div style={{textAlign:"center",padding:"60px 20px",color:"#64748b"}}>
+                <div style={{fontSize:36,marginBottom:10}}>📱</div>
+                <div style={{fontSize:15,fontWeight:600}}>No tabs found</div>
+                <div style={{fontSize:12,marginTop:5}}>Try adjusting your search or filters</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {page==="records"&&(
+          <IssueRecordsPage
+            issues={issues}
+            tabs={tabs}
+            onEdit={(rec)=>{
+              const tab=tabs.find(t=>t.id===rec.tabId);
+              if(tab) setIssueFormFor({tab,existingIssue:rec});
+            }}
+            onDelete={handleDeleteIssue}
+            onAdd={(tabId)=>{
+              const tab=tabs.find(t=>t.id===tabId);
+              if(tab) setIssueFormFor({tab,existingIssue:null});
+            }}
+          />
+        )}
+      </div>
+
+      <div className="no-print" style={{borderTop:"1px solid #1d4ed820",padding:"12px 20px",textAlign:"center",
+        color:"#334155",fontSize:9,letterSpacing:1,marginTop:30}}>
+        BIDENZIL KOBBEKADUWA MAHA VIDYALAYA · HALIELA · TAB MANAGEMENT SYSTEM · {new Date().getFullYear()} · Synced with Firebase
+      </div>
+
+      {/* Tab detail modal */}
+      {selectedTab&&(
+        <TabModal
+          tab={selectedTab}
+          issues={issues}
+          onClose={()=>setSelectedTab(null)}
+          onAddIssue={()=>setIssueFormFor({tab:selectedTab,existingIssue:null})}
+          onEditIssue={(rec)=>setIssueFormFor({tab:selectedTab,existingIssue:rec})}
+          onDeleteIssue={handleDeleteIssue}
+        />
+      )}
+
+      {/* Issue form modal */}
+      {issueFormFor&&(
+        <IssueFormModal
+          tab={issueFormFor.tab}
+          existingIssue={issueFormFor.existingIssue}
+          onSave={handleSaveIssue}
+          onClose={()=>setIssueFormFor(null)}
+        />
+      )}
+
+      {/* Toast */}
+      {toast&&<Toast msg={toast} onClose={()=>setToast(null)}/>}
+
+      <style>{`
+        @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+      `}</style>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
 </body>
 </html>
