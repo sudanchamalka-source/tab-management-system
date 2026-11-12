@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ටැබ්ලට් කළමනාකරණ පද්ධතිය</title>
+<link rel="icon" href="logo.jpg">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="locked">
+<div id="loginScr"><div class="lg-box"><img src="logo.jpg" alt=""><h2>ටැබ්ලට් කළමනාකරණය</h2><p>බ/ඩෙන්සිල් කොබ්බෑකඩුව මහා විද්‍යාලය</p>
+<input type="email" id="lg-email" placeholder="Email" autocomplete="username"><input type="password" id="lg-pass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+<button class="btn btn-blue" id="lg-btn" onclick="doLogin()">🔐 Login</button><div id="lg-err"></div></div></div>
+
+
+<header class="hdr">
+  <div class="hdr-in">
+    <div class="hdr-logo" style="padding:2px;background:rgba(255,255,255,.95);border-radius:10px;overflow:hidden"><img src="logo.jpg" style="width:100%;height:100%;object-fit:contain;border-radius:8px"></div>
+    <div class="hdr-text">
+      <h1>ටැබ්ලට් කළමනාකරණය</h1>
+      <p>බ/ඩෙන්සිල් කොබ්බෑකඩුව මහා විද්‍යාලය, හාලි ඇල · ICT ඒකකය</p>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center"><div class="sync-chip" id="syncChip">⏳</div><div class="hdr-cnt" id="hCnt" style="margin-left:0">0 ටැබ්</div></div>
+  </div>
+</header>
+
+<!-- ══ INVENTORY PAGE ══ -->
+<div class="page active" id="pg-inv">
+  <div class="stats">
+    <div class="stat st"><span class="sn" id="sTot">0</span><div class="sl">මුළු ටැබ්</div></div>
+    <div class="stat sa"><span class="sn" id="sAv">0</span><div class="sl">ඇත</div></div>
+    <div class="stat su"><span class="sn" id="sUs">0</span><div class="sl">ලබාදී ඇත</div></div>
+  </div>
+  <div style="padding:14px">
+    <div class="srch"><span class="si">🔍</span>
+      <input type="search" id="searchQ" placeholder="ටැබ් ID, serial..." oninput="renderTabList()">
+    </div>
+    <div class="filters">
+      <button class="fpill on" onclick="setF('all',this)">සියල්ල</button>
+      <button class="fpill" onclick="setF('available',this)">ඇති ඒවා</button>
+      <button class="fpill" onclick="setF('assigned',this)">ලබාදුන්</button>
+      <button class="fpill" onclick="setF('student',this)">සිසු</button>
+      <button class="fpill" onclick="setF('teacher',this)">ගුරු</button>
+    </div>
+    <div class="sec-ttl">ටැබ්ලට් ඉන්වෙන්ටරි <span class="bdg" id="invBdg">0</span></div>
+    <div class="tab-list" id="tabList"></div>
+  </div>
+</div>
+
+<!-- ══ ADD TABLET PAGE ══ -->
+<div class="page" id="pg-add">
+  <div class="sec-ttl" id="addTtl">➕ නව ටැබ්ලට් ඉන්වෙන්ටරි</div>
+  <div id="editBdg" style="display:none"><div class="edit-bdg">✏️ සංස්කරණය කරමින්...</div></div>
+
+  <div class="card">
+    <div class="card-ttl">📱 ටැබ්ලට් හඳුනාගැනීම</div>
+    <div class="fg"><label>ටැබ් අංකය (Tab No) *</label>
+      <input type="text" id="f-id" placeholder="TAB-001" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="fg-row">
+      <div class="fg"><label>ටැබ් Serial No *</label>
+        <input type="text" id="f-ts" placeholder="SN-TAB-XXXXX"></div>
+      <div class="fg"><label>Keyboard Serial No *</label>
+        <input type="text" id="f-ks" placeholder="SN-KB-XXXXX"></div>
+    </div>
+    <div class="fg"><label>ටැබ්ලට් ඡායාරූපය (Tab Photo)</label>
+      <div class="pzone" onclick="document.getElementById('f-ph').click()">
+        <div class="pzi">📷</div><p>ටැබ්ලට් ඡායාරූපයක් ගන්න</p>
+        <input type="file" id="f-ph" accept="image/*" capture="environment" style="display:none"
+          onchange="loadPh(this,'f-phprev','f-phd')">
+        <img class="pprev" id="f-phprev">
+      </div>
+    </div>
+    <div class="fg"><label>Keyboard ඡායාරූපය (KB Photo)</label>
+      <div class="pzone" onclick="document.getElementById('f-kbph').click()">
+        <div class="pzi">⌨️</div><p>Keyboard ඡායාරූපයක් ගන්න</p>
+        <input type="file" id="f-kbph" accept="image/*" capture="environment" style="display:none"
+          onchange="loadPh(this,'f-kbphprev','f-kbphd')">
+        <img class="pprev" id="f-kbphprev">
+      </div>
+    </div>
+    <div class="fg-row"><div class="fg"><label>තත්වය (Condition)</label><select id="f-cond"><option value="WORKING">වැඩ කරයි</option><option value="NOT WORKING">වැඩ නොකරයි</option><option value="NOT CHARGING">Charge නොවේ</option></select></div>
+      <div class="fg"><label>දෝෂය (Issue)</label><input type="text" id="f-issue" placeholder="උදා: Space key pressing"></div></div>
+    <div class="fg"><label>සටහන</label><input type="text" id="f-notes" placeholder="කිසියම් සටහනක්..."></div>
+  </div>
+  <input type="hidden" id="f-eid">
+  <button class="btn btn-blue" onclick="saveTab()">💾 ටැබ්ලට් සුරකින්න</button>
+  <div style="height:8px"></div>
+  <button class="btn btn-ghost" id="cancelBtn" style="display:none" onclick="cancelEdit()">✖ අවලංගු කරන්න</button>
+</div>
+
+<!-- ══ STUDENTS PAGE ══ -->
+<div class="page" id="pg-stu">
+  <div class="sec-ttl">👦 සිසු දත්ත සමුදාය <span class="bdg" id="stuBdg">0</span></div>
+
+  <div class="tsw">
+    <button class="tsw-btn on" id="sw-sl" onclick="swStuView('list')">📋 ලැයිස්තුව</button>
+    <button class="tsw-btn" id="sw-sa" onclick="swStuView('add')">➕ සිසු එකතු කරන්න</button>
+    <button class="tsw-btn" id="sw-sq" onclick="swStuView('qr')">🖨️ QR Print</button>
+  </div>
+
+  <!-- Student List -->
+  <div id="stu-list-view">
+    <div class="srch"><span class="si">🔍</span>
+      <input type="search" id="stuSearchQ" placeholder="නම, ශ්‍රේණිය..." oninput="renderStuList()">
+    </div>
+    <div class="filters" id="classFiltBar">
+      <button class="fpill on" onclick="setStuF('all',this)">සියල්ල</button>
+    </div>
+    <div class="stu-list" id="stuList"></div>
+  </div>
+
+  <!-- Student Add Form -->
+  <div id="stu-add-view" style="display:none">
+    <div id="stuEditBdg" style="display:none"><div class="edit-bdg">✏️ සංස්කරණය...</div></div>
+    <div class="card">
+      <div class="card-ttl">👦 සිසු තොරතුරු</div>
+      <div class="fg"><label>සිසු ID (ස්වයංක්‍රීය) *</label>
+        <input type="text" id="s-id" placeholder="STU-001" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fg"><label>නම (Full Name) *</label>
+        <input type="text" id="s-name" placeholder="සිසුවාගේ සම්පූර්ණ නම"></div>
+      <div class="fg-row">
+        <div class="fg"><label>ශ්‍රේණිය (Grade) *</label>
+          <select id="s-grade">
+            <option value="">-- ශ්‍රේණිය --</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option>
+            <option>10</option><option>11</option><option>12</option><option>13</option>
+          </select>
+        </div>
+        <div class="fg"><label>කොට්ඨාශය (Class) *</label>
+          <select id="s-class">
+            <option value="">-- කොට්ඨාශය --</option>
+            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label>Stream (විෂය ධාරා)</label>
+        <select id="s-stream">
+          <option value="">-- Stream (විකල්ප) --</option>
+          <option>Arts</option><option>Science</option><option>Commerce</option><option>Technology</option>
+        </select>
+      </div>
+      <div class="fg"><label>දිනය</label>
+        <input type="date" id="s-dob" placeholder="ජන්ම දිනය"></div>
+      <div class="fg"><label>සිසු ඡායාරූපය</label>
+        <div class="pzone" onclick="document.getElementById('s-ph').click()">
+          <div class="pzi">🤳</div><p>සිසු ඡායාරූපයක් ගන්න</p>
+          <input type="file" id="s-ph" accept="image/*" capture="user" style="display:none"
+            onchange="loadPh(this,'s-phprev','s-phd')">
+          <img class="pprev" id="s-phprev">
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="s-eid">
+    <button class="btn btn-blue" onclick="saveStu()">💾 සිසු සුරකින්න</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-ghost" id="stuCancelBtn" style="display:none" onclick="cancelStuEdit()">✖ අවලංගු කරන්න</button>
+  </div>
+
+  <!-- Student QR Print -->
+  <div id="stu-qr-view" style="display:none">
+    <div class="card">
+      <div class="card-ttl">QR Print කිරීම</div>
+      <div class="fg"><label>ශ්‍රේණිය තෝරන්න</label>
+        <select id="stuQrGrade" onchange="renderStuQRPrint()">
+          <option value="">-- සියලු ශ්‍රේණි --</option>
+        </select>
+      </div>
+      <button class="btn btn-blue" onclick="printStuQRBatch()">🖨️ QR Print කරන්න</button>
+      <div style="height:8px"></div>
+      <button class="btn btn-green" onclick="downloadStuQRBatchJpeg()">📥 JPEG Download</button>
+    </div>
+    <div id="stuQrPrintList"></div>
+  </div>
+</div>
+
+<!-- ══ TEACHERS PAGE ══ -->
+<div class="page" id="pg-tch">
+  <div class="sec-ttl">👩‍🏫 ගුරු දත්ත සමුදාය <span class="bdg" id="tchBdg">0</span></div>
+
+  <div class="tsw">
+    <button class="tsw-btn on" id="sw-tl" onclick="swTchView('list')">📋 ලැයිස්තුව</button>
+    <button class="tsw-btn" id="sw-ta" onclick="swTchView('add')">➕ ගුරු එකතු කරන්න</button>
+    <button class="tsw-btn" id="sw-tq" onclick="swTchView('qr')">🖨️ QR Print</button>
+  </div>
+
+  <!-- Teacher List -->
+  <div id="tch-list-view">
+    <div class="srch"><span class="si">🔍</span>
+      <input type="search" id="tchSearchQ" placeholder="නම, දුරකථනය..." oninput="renderTchList()">
+    </div>
+    <div class="tch-list" id="tchList"></div>
+  </div>
+
+  <!-- Teacher Add Form -->
+  <div id="tch-add-view" style="display:none">
+    <div id="tchEditBdg" style="display:none"><div class="edit-bdg">✏️ සංස්කරණය...</div></div>
+    <div class="card">
+      <div class="card-ttl">👩‍🏫 ගුරු තොරතුරු</div>
+      <div class="fg"><label>ගුරු ID *</label>
+        <input type="text" id="t-id" placeholder="TCH-001" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fg"><label>සම්පූර්ණ නම *</label>
+        <input type="text" id="t-name" placeholder="ගුරුවරයාගේ/ගුරුවරියගේ නම"></div>
+      <div class="fg-row">
+        <div class="fg"><label>දුරකථනය *</label>
+          <input type="tel" id="t-phone" placeholder="07X XXX XXXX"></div>
+        <div class="fg"><label>ජා.හැ.පත. *</label>
+          <input type="text" id="t-nic" placeholder="XXXXXXXXXX"></div>
+      </div>
+      <div class="fg"><label>විෂය (Subject)</label>
+        <input type="text" id="t-subject" placeholder="ගණිතය, ICT..."></div>
+      <div class="fg"><label>ගුරු ඡායාරූපය</label>
+        <div class="pzone" onclick="document.getElementById('t-ph').click()">
+          <div class="pzi">🤳</div><p>ගුරු ඡායාරූපයක් ගන්න</p>
+          <input type="file" id="t-ph" accept="image/*" capture="user" style="display:none"
+            onchange="loadPh(this,'t-phprev','t-phd')">
+          <img class="pprev" id="t-phprev">
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="t-eid">
+    <button class="btn btn-blue" onclick="saveTch()">💾 ගුරු සුරකින්න</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-ghost" id="tchCancelBtn" style="display:none" onclick="cancelTchEdit()">✖ අවලංගු කරන්න</button>
+  </div>
+
+  <!-- Teacher QR Print -->
+  <div id="tch-qr-view" style="display:none">
+    <div class="card">
+      <div class="card-ttl">ගුරු QR Print කිරීම</div>
+      <button class="btn btn-blue" onclick="printTchQRBatch()">🖨️ සියලු ගුරු QR Print</button>
+      <div style="height:8px"></div>
+      <button class="btn btn-green" onclick="downloadTchQRBatchJpeg()">📥 JPEG Download</button>
+    </div>
+    <div id="tchQrPrintList"></div>
+  </div>
+</div>
+
+<!-- ══ SCAN PAGE ══ -->
+<div class="page" id="pg-scan">
+  <div class="sec-ttl">📷 QR Scan කරන්න</div>
+
+  <div class="tsw">
+    <button class="tsw-btn on" id="sc-t1" onclick="swScanMode('issue')">📱 ටැබ් Issue</button>
+    <button class="tsw-btn" id="sc-t2" onclick="swScanMode('lookup')">🔍 QR Lookup</button>
+  </div>
+
+  <!-- ISSUE MODE -->
+  <div id="scan-issue-mode">
+    <div class="scan-step" id="step1">
+      <div class="step-hdr">
+        <div class="step-num active" id="sn1">1</div>
+        <div><div class="step-ttl">ටැබ්ලට් QR Scan කරන්න</div>
+          <div class="step-sub">ටැබ් Serial QR හෝ Keyboard QR</div></div>
+      </div>
+      <div class="cam-wrap" id="cam1">
+        <video id="vid1" autoplay playsinline muted></video>
+        <canvas class="overlay" id="cvs1"></canvas>
+        <div class="cam-overlay"><div class="scan-box"></div></div>
+        <div class="cam-hint">QR code frame එකට ගෙන එන්න</div>
+      </div>
+      <div class="sr" id="sr1">
+        <div class="sr-row"><span class="sr-icon"></span><span class="sr-id" id="sr1id"></span></div>
+        <div class="sr-det" id="sr1det"></div>
+      </div>
+      <button class="btn btn-blue" id="scanBtn1" onclick="startScan(1)">📷 Camera විවෘත කරන්න</button>
+      <div style="height:8px"></div>
+      <button class="btn btn-ghost" id="rescan1" style="display:none" onclick="resetScan()">🔄 නැවත Scan කරන්න</button>
+    </div>
+
+    <div class="scan-step" id="step2" style="opacity:.45;pointer-events:none">
+      <div class="step-hdr">
+        <div class="step-num" id="sn2">2</div>
+        <div><div class="step-ttl">සිසු / ගුරු QR Scan කරන්න</div>
+          <div class="step-sub">ලබාදෙන සිසු හෝ ගුරු QR</div></div>
+      </div>
+      <div class="cam-wrap" id="cam2">
+        <video id="vid2" autoplay playsinline muted></video>
+        <canvas class="overlay" id="cvs2"></canvas>
+        <div class="cam-overlay"><div class="scan-box"></div></div>
+        <div class="cam-hint">QR code frame එකට ගෙන එන්න</div>
+      </div>
+      <div class="pp" id="pp2">
+        <div class="pp-row">
+          <div class="pp-av" id="ppav"></div>
+          <div><div class="pp-name" id="ppname"></div><div class="pp-role" id="pprole"></div></div>
+        </div>
+      </div>
+      <div class="sr" id="sr2">
+        <div class="sr-row"><span class="sr-icon"></span><span class="sr-id" id="sr2id"></span></div>
+        <div class="sr-det" id="sr2det"></div>
+      </div>
+      <div id="manualForm" style="display:none">
+        <div class="divider"></div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:11px">📝 QR නොමැති නම් මෙහි ඇතුළත් කරන්න:</div>
+        <div class="tsw">
+          <button class="tsw-btn on" id="mt-s" onclick="swMT('student')">👦 සිසු</button>
+          <button class="tsw-btn" id="mt-t" onclick="swMT('teacher')">👩‍🏫 ගුරු</button>
+        </div>
+        <div id="mstu">
+          <div class="fg"><label>නම *</label><input type="text" id="mn-name" placeholder="සිසුවාගේ නම"></div>
+          <div class="fg"><label>ශ්‍රේණිය *</label><input type="text" id="mn-grade" placeholder="10 A"></div>
+        </div>
+        <div id="mtch" style="display:none">
+          <div class="fg"><label>නම *</label><input type="text" id="mt-name" placeholder="ගුරුවරයාගේ නම"></div>
+          <div class="fg"><label>දුරකථනය *</label><input type="tel" id="mt-phone" placeholder="07X XXX XXXX"></div>
+          <div class="fg"><label>ජා.හැ.පත. *</label><input type="text" id="mt-nic" placeholder="XXXXXXXXXX"></div>
+        </div>
+      </div>
+      <button class="btn btn-blue" id="scanBtn2" onclick="startScan(2)" style="display:none">📷 Camera විවෘත කරන්න</button>
+      <div style="height:8px"></div>
+      <button class="btn btn-ghost" id="manualBtn" onclick="showManual()" style="display:none">📝 අතින් ඇතුළත් කරන්න</button>
+      <button class="btn btn-ghost" id="rescan2" style="display:none" onclick="resetScan2()">🔄 නැවත Scan</button>
+    </div>
+
+    <div class="scan-step" id="step3" style="opacity:.45;pointer-events:none">
+      <div class="step-hdr">
+        <div class="step-num" id="sn3">3</div>
+        <div><div class="step-ttl">තහවුරු කරන්න</div>
+          <div class="step-sub">ටැබ්ලට් ලබාදෙන්නද?</div></div>
+      </div>
+      <div id="confirmBox" style="display:none">
+        <div class="asgn-blk" id="confDetail"></div>
+      </div>
+      <button class="btn btn-green" id="confirmBtn" onclick="confirmIssue()" style="display:none">✅ ලබාදෙන්න — සුරකින්න</button>
+    </div>
+  </div>
+
+  <!-- LOOKUP MODE -->
+  <div id="scan-lookup-mode" style="display:none">
+    <div class="scan-step">
+      <div class="step-hdr">
+        <div class="step-num active">📷</div>
+        <div><div class="step-ttl">ඕනෑම QR Scan කරන්න</div>
+          <div class="step-sub">ටැබ්, සිසු, ගුරු QR — ඕනෑම එකක්</div></div>
+      </div>
+      <div class="cam-wrap" id="camLookup" style="display:block">
+        <video id="vidLookup" autoplay playsinline muted></video>
+        <canvas class="overlay" id="cvsLookup"></canvas>
+        <div class="cam-overlay"><div class="scan-box"></div></div>
+        <div class="cam-hint">QR code scan කරන්න</div>
+      </div>
+      <button class="btn btn-blue" id="lookupScanBtn" onclick="startLookupScan()">📷 Camera විවෘත කරන්න</button>
+      <div style="height:8px"></div>
+      <button class="btn btn-ghost" id="lookupResetBtn" onclick="resetLookupScan()" style="display:none">🔄 නැවත Scan</button>
+    </div>
+    <div id="lookupResult"></div>
+  </div>
+</div>
+
+<!-- ══ MORE PAGE ══ -->
+<div class="page" id="pg-more">
+  <div class="sec-ttl">⚙️ වැඩිදුර</div>
+  <div class="card">
+    <div class="card-ttl">↩️ ටැබ්ලට් ආපසු ගන්න</div>
+    <div class="fg"><label>ලබාදුන් ටැබ්ලට්</label>
+      <select id="r-sel"><option value="">-- ලබාදුන් ටැබ්ලට් --</option></select></div>
+    <button class="btn btn-ghost" onclick="doReturn()" style="margin-top:4px">↩️ ආපසු ලැබුණු බව සටහන්</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">🖨️ ටැබ් QR Print (එකක් බැගින්)</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">QR 1 = Tab No + Tab Serial + KB Serial</div>
+    <div class="fg"><label>ටැබ්ලට් තෝරන්න</label>
+      <select id="qr-sel"><option value="">-- ටැබ්ලට් --</option></select></div>
+    <button class="btn btn-ghost" onclick="printQRSel()">🖨️ QR Print කරන්න</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-green" onclick="downloadTabQRJpegSel()">📥 JPEG Download (තෝරාගත්)</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-blue" onclick="printAllTabQR()">🖨️ සියලු ටැබ් QR Print (batch)</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-green" onclick="downloadAllTabQRJpeg()">📥 සියලු ටැබ් JPEG Download</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">📄 PDF වාර්තා</div>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <button class="btn btn-blue" onclick="pdfReport('inventory')">📋 ටැබ්ලට් ඉන්වෙන්ටරි වාර්තාව</button>
+      <button class="btn btn-blue" onclick="pdfReport('assigned')">📤 ලබාදුන් ටැබ්ලට් වාර්තාව</button>
+      <button class="btn btn-blue" onclick="pdfReport('students')">👦 සිසු ලැයිස්තු වාර්තාව</button>
+      <button class="btn btn-blue" onclick="pdfReport('teachers')">👩‍🏫 ගුරු ලැයිස්තු වාර්තාව</button>
+      <button class="btn btn-blue" onclick="pdfReport('summary')">📊 සමස්ත සාරාංශ වාර්තාව</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">📊 දත්ත කළමනාකරණය</div>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <button class="btn btn-ghost" onclick="exportJSON()">📤 දත්ත Export (JSON)</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('impF').click()">📥 දත්ත Import (JSON)</button>
+      <input type="file" id="impF" accept=".json" style="display:none" onchange="importJSON(this)">
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-ttl">☁️ Firebase ගිණුම</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px" id="acctInfo"></p>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <button class="btn btn-blue" onclick="seedTablets()">🌱 ආරම්භක ටැබ් 49 ආයාත කරන්න</button>
+      <button class="btn btn-ghost" onclick="doLogout()">🚪 Logout</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-ttl" style="color:var(--pink)">⚠️ අනතුරු ඇඟවීම</div>
+    <button class="btn btn-pink" onclick="clearAll()">🗑️ සියලු දත්ත මකන්න</button>
+  </div>
+  <div class="card">
+    <div class="card-ttl">ℹ️ මෙම යෙදුම ගැන</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.8">
+      📱 <strong>ටැබ්ලට් කළමනාකරණ පද්ධතිය</strong><br>
+      බ/ඩෙන්සිල් කොබ්බෑකඩුව මහා විද්‍යාලය, හාලි ඇල · ICT ඒකකය<br>
+      අනුවාදය 4.0 — Firebase live sync + QR<br>
+      <span style="font-size:10px">දත්ත Firebase Cloud හි ගබඩා වේ — සියලු උපාංග අතර live sync.</span>
+    </p>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav">
+  <button class="bnav-btn on" onclick="goPage('inv',this)"><span class="ni">📋</span>ඉන්වෙන්ටරි</button>
+  <button class="bnav-btn" onclick="goPage('add',this)"><span class="ni">➕</span>ටැබ් Add</button>
+  <button class="bnav-btn" onclick="goPage('stu',this)"><span class="ni">👦</span>සිසු</button>
+  <button class="bnav-btn" onclick="goPage('tch',this)"><span class="ni">👩‍🏫</span>ගුරු</button>
+  <button class="bnav-btn" onclick="goPage('scan',this)"><span class="ni">📷</span>Scan</button>
+  <button class="bnav-btn" onclick="goPage('more',this)"><span class="ni">⚙️</span>වැඩිදුර</button>
+</nav>
+
+<!-- DETAIL MODAL -->
+<div class="ov" id="ov" onclick="closeOv(event)">
+  <div class="modal">
+    <div class="modal-hdl"></div>
+    <div id="modBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
